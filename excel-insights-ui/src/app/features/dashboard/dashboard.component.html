@@ -1,0 +1,116 @@
+@if (result) {
+  <div class="dashboard-page">
+
+    <nav class="dashboard-nav">
+      <div>
+        <h1>Excel Insights AI</h1>
+        <p>{{ result.filename }}</p>
+      </div>
+
+      <button (click)="goBack()">Analyze another file</button>
+    </nav>
+
+    <section class="overview-grid">
+      <div class="overview-card">
+        <span>Rows</span>
+        <strong>{{ result.row_count }}</strong>
+      </div>
+
+      <div class="overview-card">
+        <span>Columns</span>
+        <strong>{{ result.column_count }}</strong>
+      </div>
+
+      <div class="overview-card">
+        <span>Numeric Columns</span>
+        <strong>{{ result.numeric_columns.length }}</strong>
+      </div>
+
+      <div class="overview-card">
+        <span>Suggested Charts</span>
+        <strong>{{ result.chart_suggestions.length }}</strong>
+      </div>
+    </section>
+
+    <section class="content-grid">
+      <div class="panel ai-panel">
+        <div class="panel-header">
+          <h2>AI Insights</h2>
+          <span>Generated analysis</span>
+        </div>
+
+        <pre>{{ result.ai_insights }}</pre>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <h2>Numeric KPIs</h2>
+          <span>Auto calculated</span>
+        </div>
+
+        <div class="kpi-list">
+          @for (key of getKpiKeys(); track key) {
+            <div class="kpi-item">
+              <h3>{{ key }}</h3>
+
+              <div class="kpi-values">
+                <p><span>Sum</span><strong>{{ result.numeric_kpis[key].sum }}</strong></p>
+                <p><span>Avg</span><strong>{{ result.numeric_kpis[key].average }}</strong></p>
+                <p><span>Min</span><strong>{{ result.numeric_kpis[key].min }}</strong></p>
+                <p><span>Max</span><strong>{{ result.numeric_kpis[key].max }}</strong></p>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Suggested Charts</h2>
+        <span>Ready for visualization</span>
+      </div>
+
+      <div class="charts-grid">
+        @for (chart of result.chart_suggestions; track chart.title) {
+          <div class="chart-card">
+            <span class="chart-type">{{ chart.type }}</span>
+            <h3>{{ chart.title }}</h3>
+            <p>X-axis: {{ chart.x_axis }}</p>
+            <p>Y-axis: {{ chart.y_axis }}</p>
+          </div>
+        }
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Data Preview</h2>
+        <span>First 5 rows</span>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              @for (col of getSampleColumns(); track col) {
+                <th>{{ col }}</th>
+              }
+            </tr>
+          </thead>
+
+          <tbody>
+            @for (row of result.sample_data; track $index) {
+              <tr>
+                @for (col of getSampleColumns(); track col) {
+                  <td>{{ row[col] }}</td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </div>
+}
