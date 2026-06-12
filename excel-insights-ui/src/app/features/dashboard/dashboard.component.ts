@@ -10,6 +10,7 @@ import { DropdownComponent } from '../../shared/components/dropdown/dropdown.com
 import { ChartConfig, ChartType } from '../../shared/models/chart-config.model';
 import { DropdownConfig } from '../../shared/components/dropdown/dropdown.model';
 import { DataTableModalComponent } from '../../shared/components/model/data-table-modal.component';
+import { FormsModule } from '@angular/forms';
 
 type MetricType =
   | 'revenue'
@@ -32,6 +33,7 @@ type MetricType =
     SmartChartComponent,
     DropdownComponent,
     DataTableModalComponent,
+    FormsModule
   ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss'],
@@ -76,6 +78,13 @@ export class DashboardComponent implements OnInit {
     options: [],
     selectedValue: '',
   };
+  sheetDropdown: DropdownConfig<string> = {
+    label: 'الشيت الحالي',
+    selectedValue: '',
+    grouped: false,
+    showIcons: false,
+    options: [],
+  };
 
   bigNumbers: {
     label: string;
@@ -112,9 +121,6 @@ export class DashboardComponent implements OnInit {
   }
 
   onSheetChange(sheetName: string): void {
-    console.log('Clicked sheet:', sheetName);
-    console.log('All sheets:', (this.result as any)?.sheets);
-
     const sheet = (this.result as any)?.sheets?.[sheetName];
 
     if (!sheet) {
@@ -125,9 +131,13 @@ export class DashboardComponent implements OnInit {
     this.selectedSheetName = sheetName;
     this.currentSheet = sheet;
 
+    this.buildBigNumbers();
+
+    this.smartInsights = sheet.ai_insights?.smart_insights ?? null;
+
+    this.updateSheetDropdown();
     this.initializeChartBuilder();
   }
-
   private initializeSelectedSheet(): void {
     if (!this.result) return;
 
@@ -140,6 +150,8 @@ export class DashboardComponent implements OnInit {
     this.currentSheet =
       (this.result as any).sheets?.[defaultSheetName] ||
       this.result;
+
+    this.updateSheetDropdown();
   }
 
   private setUploadedAgo(): void {
@@ -317,54 +329,66 @@ export class DashboardComponent implements OnInit {
     ];
   }
 
+  private updateSheetDropdown(): void {
+    this.sheetDropdown = {
+      ...this.sheetDropdown,
+      selectedValue: this.selectedSheetName,
+      options: ((this.result as any)?.available_sheets || []).map((sheet: string) => ({
+        label: sheet,
+        value: sheet,
+      })),
+    };
+  }
   private buildBigNumbers(): void {
-    if (!this.result) return;
+    if (!this.currentSheet?.ai_insights) return;
+  console.log('===== DEBUG buildBigNumbers =====');
+  console.log('Current Sheet:', this.selectedSheetName);
+  console.log('AI Data Raw:', this.currentSheet.ai_insights);
+    try {
+      const aiData =
+        typeof this.currentSheet.ai_insights === 'string'
+          ? JSON.parse(this.currentSheet.ai_insights)
+          : this.currentSheet.ai_insights;
 
-    if (this.result.ai_insights) {
-      try {
-        const aiData =
-          typeof this.result.ai_insights === 'string'
-            ? JSON.parse(this.result.ai_insights)
-            : this.result.ai_insights;
+      // استخدم الكاردات من AI مباشرة
+      if (aiData.kpi_cards && Array.isArray(aiData.kpi_cards)) {
+        this.bigNumbers = aiData.kpi_cards.map((card: any) => {
+          let metricType = this.normalizeMetricType(card.metricType);
 
-        if (aiData.kpi_cards && Array.isArray(aiData.kpi_cards)) {
-          this.bigNumbers = aiData.kpi_cards.map((card: any) => {
-            const metricType = this.normalizeMetricType(card.metricType);
+          return {
+            label: card.label,
+            value: card.value,
+            description: card.description,
+            metricType,
+            icon: this.resolveMetricIcon(metricType),
+            color: this.resolveMetricColor(metricType),
+            background: this.resolveMetricBackground(metricType),
+          };
+        });
 
-            return {
-              label: card.label,
-              value: card.value,
-              description: card.description,
-              metricType,
-              icon: this.resolveMetricIcon(metricType),
-              color: this.resolveMetricColor(metricType),
-              background: this.resolveMetricBackground(metricType),
-            };
-          });
-        }
-
-        if (aiData.smart_insights) {
-          this.smartInsights = aiData.smart_insights;
-        }
-
-        if (this.bigNumbers.length > 0) {
-          return;
-        }
-      } catch (error) {
-        console.error('Failed to parse AI insights. Using fallback logic.', error);
+        // التوصيات الذكية
+        this.smartInsights = aiData.smart_insights ?? null;
+        return;
       }
+
+      // إذا لم توجد AI cards استخدم fallback
+      if (aiData.smart_insights) {
+        this.smartInsights = aiData.smart_insights;
+      }
+
+      const entries = Object.entries(this.currentSheet?.numeric_kpis ?? {}).slice(0, 4);
+
+      this.bigNumbers = entries
+        .flatMap(([column, kpi]: [string, any]) => [
+          this.createKpiCard(`إجمالي ${column}`, kpi.sum, 'مجموع القيم', 'generic'),
+          this.createKpiCard(`متوسط ${column}`, kpi.average, 'متوسط القيم', 'average'),
+          this.createKpiCard(`أعلى ${column}`, kpi.max, 'أعلى قيمة', 'max'),
+          this.createKpiCard(`أقل ${column}`, kpi.min, 'أقل قيمة', 'min'),
+        ])
+        .slice(0, 4);
+    } catch (error) {
+      console.error('Failed to parse AI insights. Using fallback logic.', error);
     }
-
-    const entries = Object.entries(this.currentSheet?.numeric_kpis ?? {}).slice(0, 4);
-
-    this.bigNumbers = entries
-      .flatMap(([column, kpi]: [string, any]) => [
-        this.createKpiCard(`إجمالي ${column}`, kpi.sum, 'مجموع القيم', 'generic'),
-        this.createKpiCard(`متوسط ${column}`, kpi.average, 'متوسط القيم', 'average'),
-        this.createKpiCard(`أعلى ${column}`, kpi.max, 'أعلى قيمة', 'max'),
-        this.createKpiCard(`أقل ${column}`, kpi.min, 'أقل قيمة', 'min'),
-      ])
-      .slice(0, 4);
   }
 
   private createKpiCard(
@@ -437,15 +461,16 @@ export class DashboardComponent implements OnInit {
   }
 
   private resolveMetricIcon(metricType?: string): string {
-    switch (this.normalizeMetricType(metricType)) {
+    switch (metricType) {
       case 'revenue': return '/icons/revenue.svg';
       case 'quantity': return '/icons/quantity.svg';
       case 'average': return '/icons/average.svg';
       case 'max': return '/icons/max.svg';
       case 'min': return '/icons/min.svg';
       case 'discount': return '/icons/discount.svg';
-      case 'price': return '/icons/price.svg';
       case 'profit': return '/icons/money-up.svg';
+      case 'price': return '/icons/price.svg';
+      case 'generic': return '/icons/Vector.svg'; 
       default: return '/icons/Vector.svg';
     }
   }

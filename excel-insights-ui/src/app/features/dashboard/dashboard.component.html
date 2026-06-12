@@ -70,17 +70,6 @@
 
         <div class="info-card">
           <div class="info-content">
-            <span>الشيت الحالي</span>
-            <strong>{{ selectedSheetName || '-' }}</strong>
-          </div>
-
-          <span class="info-icon">
-            <img src="/icons/files.svg" alt="" />
-          </span>
-        </div>
-
-        <div class="info-card">
-          <div class="info-content">
             <span>حجم الملف</span>
             <strong>{{ data.file_size || '-' }}</strong>
           </div>
@@ -92,19 +81,22 @@
       </div>
 
       <div class="file-card compact-file-card">
-        <span class="file-icon">
-          <img src="/icons/done-upload.svg" alt="" />
-        </span>
+          <div class="info-content">
+            @if ((data.available_sheets?.length || 0) > 1) {
+              <app-dropdown
+                class="sheet-dropdown"
+                [config]="sheetDropdown"
+                (selectionChange)="onSheetChange($event)"
+              />
+            } @else {
+              <strong>{{ selectedSheetName || '-' }}</strong>
+            }
+          </div>
 
-        <div class="file-content">
-          <h1>{{ data.filename }}</h1>
-
-          <p>
-            <img src="/icons/tick-circle.svg" alt="" />
-            تم الرفع: {{ uploadedAgo }}
-          </p>
+          <span class="info-icon">
+            <img src="/icons/files.svg" alt="" />
+          </span>
         </div>
-      </div>
     </section>
 
     <section class="big-number-grid" [class.kpi-count-1]="bigNumbers.length === 1"
@@ -128,7 +120,6 @@
       <div class="section-head">
         <div>
           <h2>معاينة البيانات</h2>
-          <p>عرض أول صفوف من الشيت الحالي: {{ selectedSheetName }}</p>
         </div>
 
         <button type="button" (click)="openTableModal()">
@@ -170,7 +161,6 @@
 
             <div>
               <h2>إعدادات الرسم</h2>
-              <p>اختاري نوع الرسم والمحاور من الشيت الحالي.</p>
             </div>
           </div>
 

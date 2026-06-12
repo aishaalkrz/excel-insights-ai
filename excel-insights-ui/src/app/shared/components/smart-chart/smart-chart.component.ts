@@ -81,7 +81,11 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
     this.setupColorScale(fullData, catKey);
     this.renderInteractiveLegend(fullData, catKey);
 
-    const chartData = fullData.filter(d => !this.hiddenCategories.has(String(d[catKey])));
+    let chartData = fullData.filter(d => !this.hiddenCategories.has(String(d[catKey])));
+
+    if (['bar', 'line', 'pie','dot'].includes(this.config.type)) {
+      chartData = this.aggregateByCategory(chartData, catKey, valKey);
+    }
 
     if (!chartData.length) return;
 
@@ -314,6 +318,20 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
       )
   }
 
+  private aggregateByCategory(data: any[], catKey: string, valKey: string): any[] {
+    const map = new Map<string, number>();
+
+    for (const row of data) {
+      const key = String(row[catKey]);
+      const value = this.getValue(row, valKey);
+      map.set(key, (map.get(key) ?? 0) + value);
+    }
+
+    return Array.from(map.entries()).map(([key, value]) => ({
+      [catKey]: key,
+      [valKey]: value,
+    }));
+  }
   private drawAxisLabels(svg: any): void {
     if (this.config.xAxisLabel) svg.append('text').attr('class', 'axis-label x-label').attr('x', this.width / 2).attr('y', this.height + 32).attr('text-anchor', 'middle').text(this.config.xAxisLabel);
     if (this.config.yAxisLabel) svg.append('text').attr('class', 'axis-label y-label').attr('x', -this.height / 2).attr('y', 18).attr('text-anchor', 'middle').attr('transform', 'rotate(-90)').text(this.config.yAxisLabel);
