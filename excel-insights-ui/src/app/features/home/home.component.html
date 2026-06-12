@@ -1,165 +1,269 @@
-<div class="landing-page">
+<div class="landing-page" dir="rtl">
 
+  <!-- Navbar -->
   <nav class="navbar">
-    <div class="brand">
-      <div class="logo-mark">
-        <span></span>
-      </div>
 
+    <div class="brand">
+      <div class="logo-icon">
+        <img src="/icons/logo.svg" alt="Basira Logo" />
+      </div>
       <div class="brand-text">
-        <strong>Excel Insights AI</strong>
-        <small>Smart dashboard generator</small>
+        <strong>بصيرة</strong>
+        <small>حوّل بياناتك إلى رؤى واضحة</small>
       </div>
     </div>
+
+    <ul class="nav-links">
+      <li class="active">الرئيسية</li>
+      <li>المميزات</li>
+      <li>كيف يعمل</li>
+      <li>الأسعار</li>
+    </ul>
 
     <div class="nav-actions">
-      <button class="ghost-btn">Sign in</button>
-      <button class="outline-btn">Sign up</button>
+      <button class="outline-btn">
+        إنشاء حساب
+      </button>
+
+      <button class="primary-btn">
+        تسجيل الدخول
+      </button>
     </div>
+
   </nav>
 
+  <!-- Hero -->
   <main class="hero">
 
+    <!-- Left Side -->
+    <section class="hero-visual">
+
+      <div class="visual-glow"></div>
+
+      <div class="laptop-card">
+
+        <div class="laptop-lid">
+
+          <div class="laptop-screen">
+
+            <div class="screen-sidebar">
+
+              <div class="mini-brand">
+                <img src="/icons/logo.svg" alt="" />
+                <strong>بصيرة</strong>
+              </div>
+
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+
+            </div>
+
+            <div class="screen-content">
+
+              <div class="screen-header">
+                <div>
+                  <strong>لوحة تحليل المبيعات</strong>
+                  <small>AI Dashboard</small>
+                </div>
+
+                <span></span>
+              </div>
+
+              <div class="screen-kpis">
+
+                <div>
+                  <small>الإيرادات</small>
+                  <strong>125K</strong>
+                </div>
+
+                <div>
+                  <small>الأرباح</small>
+                  <strong>91K</strong>
+                </div>
+
+                <div>
+                  <small>العملاء</small>
+                  <strong>4.5K</strong>
+                </div>
+
+                <div>
+                  <small>الطلبات</small>
+                  <strong>1.2K</strong>
+                </div>
+
+              </div>
+
+              <div class="screen-main">
+
+                <div class="chart-panel">
+
+                  <div class="chart-title">
+                    <span>الأداء الشهري</span>
+                    <small>+18%</small>
+                  </div>
+
+                  <div class="chart-bars">
+                    <span style="--h:40%"></span>
+                    <span style="--h:65%"></span>
+                    <span style="--h:55%"></span>
+                    <span style="--h:80%"></span>
+                    <span style="--h:60%"></span>
+                    <span style="--h:75%"></span>
+                  </div>
+
+                </div>
+
+                <div class="donut-panel">
+                  <div class="donut-chart"></div>
+                  <small>نسبة النمو</small>
+                </div>
+
+              </div>
+
+              <div class="line-chart">
+                <span></span>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        <div class="laptop-hinge"></div>
+        <div class="laptop-base"></div>
+
+        <div class="excel-float">
+          <img class="excel-file" src="/icons/excel-file.svg" alt="Excel" />
+        </div>
+        <div class="csv-float">
+          <img class="csv-file" src="/icons/csv-file.svg" alt="CSV" />
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- Right Side -->
     <section class="hero-content">
-      <div class="badge">
-        <span class="dot"></span>
-        AI-powered Excel analytics
+
+      <div class="chain-icon">
+        <img src="/icons/link.svg" alt="" />
       </div>
 
       <h1>
-        Turn your Excel files into
-        <span>smart dashboards</span>
-        in seconds.
+        حلّل بياناتك
+        <br />
+        <span>واكتشف رؤى حقيقية</span>
       </h1>
 
       <p>
-        Upload your Excel or CSV file and instantly get KPIs,
-        charts, executive summaries, and AI-powered business insights.
+        ارفع ملفات Excel أو CSV ودع الذكاء الاصطناعي
+        يحول بياناتك إلى لوحات معلومات ورسوم بيانية
+        ومؤشرات أداء خلال ثوانٍ.
       </p>
 
-      <div class="upload-panel">
-        <label class="file-drop">
-          <input
-            type="file"
-            accept=".xlsx,.xls,.csv"
-            (change)="onFileSelected($event)"
-          />
+      <input #fileInput type="file" hidden accept=".xlsx,.xls,.csv" (change)="onFileSelected($event)" />
 
-          <div class="upload-icon">↗</div>
+      <div class="hero-actions">
 
-          <div>
-            <strong>
-              {{ selectedFileName || 'Upload Excel or CSV file' }}
-            </strong>
-            <small>.xlsx, .xls, .csv supported</small>
-          </div>
-        </label>
+        <button class="upload-btn" type="button" [class.file-selected]="selectedFile" (click)="fileInput.click()">
+          {{ selectedFileName || 'رفع ملف Excel أو CSV' }}
 
-        <button
-          class="analyze-btn"
-          type="button"
-          (click)="analyzeData()"
-          [disabled]="loading"
-        >
-          {{ loading ? 'Analyzing...' : 'Analyze Data' }}
-          <span>→</span>
+          <img [src]="selectedFile ? '/icons/tick-circle.svg' : '/icons/upload.svg'" alt="" />
         </button>
+
+        @if (selectedFile) {
+        <button class="analyze-outline" type="button" (click)="analyzeData()" [disabled]="loading">
+          {{ loading ? 'جاري التحليل...' : 'حلّل بياناتك' }}
+          <img src="/icons/analyis.svg" alt="" />
+        </button>
+        }
+
       </div>
-      <p class="error-message" *ngIf="errorMessage">
+
+
+      @if (errorMessage) {
+      <p class="error-message">
         {{ errorMessage }}
       </p>
-    </section>
+      }
 
-    <section class="hero-visual">
-      <div class="glow glow-one"></div>
-      <div class="glow glow-two"></div>
-
-      <div class="dashboard-preview">
-        <div class="preview-header">
-          <div>
-            <strong>Sales Dashboard</strong>
-            <small>Generated by AI</small>
-          </div>
-
-          <span class="status">Live</span>
-        </div>
-
-        <div class="kpi-row">
-          <div class="mini-card">
-            <small>Revenue</small>
-            <strong>$128K</strong>
-          </div>
-
-          <div class="mini-card">
-            <small>Orders</small>
-            <strong>1,248</strong>
-          </div>
-
-          <div class="mini-card">
-            <small>Growth</small>
-            <strong>+18%</strong>
-          </div>
-        </div>
-
-        <div class="chart-area">
-          <div class="bar bar-1"></div>
-          <div class="bar bar-2"></div>
-          <div class="bar bar-3"></div>
-          <div class="bar bar-4"></div>
-          <div class="bar bar-5"></div>
-          <div class="bar bar-6"></div>
-        </div>
-
-        <div class="insight-card">
-          <span>AI Insight</span>
-          <p>
-            Online sales increased this month, while discounts improved customer conversion.
-          </p>
-        </div>
-      </div>
     </section>
 
   </main>
 
+  <!-- Features -->
   <section class="features">
-    <div class="section-title">
-      <h2>What does the platform provide?</h2>
-      <p>Everything you need to understand your business data faster.</p>
+
+    <div class="feature-card">
+
+      <div class="feature-head">
+        <h3>تحليل ذكي</h3>
+
+        <div class="feature-icon">
+          <img src="/icons/1.svg" alt="" />
+        </div>
+      </div>
+
+      <p>
+        يقوم النظام بفحص بياناتك بعمق وتحديد الأنماط المخفية والعلاقات بين المتغيرات،
+        مما يوفر عليك ساعات من العمل اليدوي ويمنحك رؤية شاملة ودقيقة لاتخاذ قرارات أفضل.
+      </p>
     </div>
 
-    <div class="feature-grid">
-      <div class="feature-card">
-        <div class="feature-icon">📊</div>
-        <h3>Auto Dashboards</h3>
-        <p>
-          Automatically detects numeric, text, and date columns to suggest useful charts.
-        </p>
+    <div class="feature-card">
+
+      <div class="feature-head">
+        <h3>رسوم بيانية تفاعلية</h3>
+
+        <div class="feature-icon">
+          <img src="/icons/2.svg" alt="" />
+        </div>
       </div>
 
-      <div class="feature-card">
-        <div class="feature-icon">🤖</div>
-        <h3>AI Insights</h3>
-        <p>
-          Generates executive summaries, business insights, and practical recommendations.
-        </p>
-      </div>
+      <p>
+        اختر من بين عشرات أنواع المخططات كالأعمدة والخطوط والدوائر، وتفاعل مع البيانات
+        مباشرةً عبر التكبير والتصفية، لتقديم تقارير بصرية احترافية تناسب جميع المستويات.
+      </p>
 
-      <div class="feature-card">
-        <div class="feature-icon">⚡</div>
-        <h3>Instant KPIs</h3>
-        <p>
-          Extracts sums, averages, minimums, and maximums from your data instantly.
-        </p>
-      </div>
-
-      <div class="feature-card">
-        <div class="feature-icon">🔐</div>
-        <h3>Save Later</h3>
-        <p>
-          Sign in later to save dashboards, revisit analysis, and manage uploaded files.
-        </p>
-      </div>
     </div>
+
+    <div class="feature-card">
+
+      <div class="feature-head">
+        <h3>نتائج فورية</h3>
+
+        <div class="feature-icon">
+          <img src="/icons/3.svg" alt="" />
+        </div>
+      </div>
+
+      <p>
+        بمجرد رفع ملفك تظهر النتائج فورًا دون انتظار، سواء كانت بياناتك تحتوي على مئات
+        أو ملايين السجلات، مع ضمان الدقة والسرعة في كل عملية تحليل.
+      </p>
+    </div>
+
+    <div class="feature-card">
+
+      <div class="feature-head">
+        <h3>تصدير النتائج</h3>
+
+        <div class="feature-icon">
+          <img src="/icons/4.svg" alt="" />
+        </div>
+      </div>
+
+      <p>
+        صدّر نتائجك بصيغ متعددة كـ PDF وExcel وPNG، وشاركها مباشرةً عبر رابط أو بريد إلكتروني،
+        مع إمكانية ضبط صلاحيات الوصول لكل عضو في فريقك.
+      </p>
+
+    </div>
+
   </section>
 
 </div>

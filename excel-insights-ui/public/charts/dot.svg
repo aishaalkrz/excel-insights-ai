@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 168 120" fill="none" fit="" preserveAspectRatio="xMidYMid meet" focusable="false">
+  <style>
+    /* Smooth hover effect for the bubbles */
+    .bubble {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transform-origin: center;
+      cursor: pointer;
+    }
+    .bubble:hover {
+      transform: scale(1.15);
+      filter: drop-shadow(0px 4px 8px rgba(62, 123, 107, 0.6));
+    }
+  </style>
+
+  <mask id="mask0_bubble_chart" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="168" height="120">
+    <line x1="24.5" y1="2.18557e-08" x2="24.5" y2="120" stroke="white"/>
+    <line x1="72.5" y1="2.18557e-08" x2="72.5" y2="120" stroke="white"/>
+    <line x1="120.5" y1="2.18557e-08" x2="120.5" y2="120" stroke="white"/>
+    <line x1="48.5" y1="2.18557e-08" x2="48.5" y2="120" stroke="white"/>
+    <line x1="96.5" y1="2.18557e-08" x2="96.5" y2="120" stroke="white"/>
+    <line x1="144.5" y1="2.18557e-08" x2="144.5" y2="120" stroke="white"/>
+    <line y1="23.5" x2="168" y2="23.5" stroke="white"/>
+    <line y1="95.5" x2="168" y2="95.5" stroke="white"/>
+    <line y1="47.5" x2="168" y2="47.5" stroke="white"/>
+    <line y1="71.5" x2="168" y2="71.5" stroke="white"/>
+  </mask>
+
+  <g mask="url('#mask0_bubble_chart')">
+    <rect width="168" height="120" fill="url('#paint0_radial_bubble')"/>
+  </g>
+
+  <circle class="bubble" cx="72" cy="47" r="13" fill="#3E7B6B" transform-origin="72px 47px"/>
+  <circle class="bubble" cx="48" cy="72" r="11" fill="#75A698" transform-origin="48px 72px"/>
+  <circle class="bubble" cx="96" cy="72" r="7" fill="#2D5F52" transform-origin="96px 72px"/>
+  <circle class="bubble" cx="120" cy="48" r="4" fill="#A8C7BE" transform-origin="120px 48px"/>
+
+  <defs>
+    <radialGradient id="paint0_radial_bubble" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(84 60) rotate(90) scale(60 84)">
+      <stop stop-color="#75A698" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#75A698" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+</svg>

@@ -1,116 +1,283 @@
-@if (result) {
-  <div class="dashboard-page">
+<div class="dashboard-shell" *ngIf="result as data" dir="rtl">
+  <header class="dashboard-header">
+    <div class="header-title">
+      <h1>لوحة التحكم</h1>
+    </div>
 
-    <nav class="dashboard-nav">
-      <div>
-        <h1>Excel Insights AI</h1>
-        <p>{{ result.filename }}</p>
-      </div>
+    <div class="header-actions">
+      <button type="button" class="header-export-btn">
+        <img src="/icons/upload.svg" alt="" />
+        تصدير التقرير
+      </button>
 
-      <button (click)="goBack()">Analyze another file</button>
+      <div class="user-avatar">ب</div>
+    </div>
+  </header>
+
+  <aside class="dashboard-sidebar">
+    <div class="sidebar-brand">
+      <img src="/icons/logo.svg" alt="" />
+      <strong>بصيرة</strong>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a class="active">
+        <img src="/icons/controlpanel.svg" alt="" />
+        لوحة التحكم
+      </a>
+
+      <a>
+        <img src="/icons/files.svg" alt="" />
+        الملفات
+      </a>
+
+      <a>
+        <img src="/icons/reports-light.svg" alt="" />
+        التقارير
+      </a>
+
+      <a>
+        <img src="/icons/settings.svg" alt="" />
+        الإعدادات
+      </a>
     </nav>
+  </aside>
 
-    <section class="overview-grid">
-      <div class="overview-card">
-        <span>Rows</span>
-        <strong>{{ result.row_count }}</strong>
-      </div>
-
-      <div class="overview-card">
-        <span>Columns</span>
-        <strong>{{ result.column_count }}</strong>
-      </div>
-
-      <div class="overview-card">
-        <span>Numeric Columns</span>
-        <strong>{{ result.numeric_columns.length }}</strong>
-      </div>
-
-      <div class="overview-card">
-        <span>Suggested Charts</span>
-        <strong>{{ result.chart_suggestions.length }}</strong>
-      </div>
-    </section>
-
-    <section class="content-grid">
-      <div class="panel ai-panel">
-        <div class="panel-header">
-          <h2>AI Insights</h2>
-          <span>Generated analysis</span>
-        </div>
-
-        <pre>{{ result.ai_insights }}</pre>
-      </div>
-
-      <div class="panel">
-        <div class="panel-header">
-          <h2>Numeric KPIs</h2>
-          <span>Auto calculated</span>
-        </div>
-
-        <div class="kpi-list">
-          @for (key of getKpiKeys(); track key) {
-            <div class="kpi-item">
-              <h3>{{ key }}</h3>
-
-              <div class="kpi-values">
-                <p><span>Sum</span><strong>{{ result.numeric_kpis[key].sum }}</strong></p>
-                <p><span>Avg</span><strong>{{ result.numeric_kpis[key].average }}</strong></p>
-                <p><span>Min</span><strong>{{ result.numeric_kpis[key].min }}</strong></p>
-                <p><span>Max</span><strong>{{ result.numeric_kpis[key].max }}</strong></p>
-              </div>
-            </div>
-          }
-        </div>
-      </div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-header">
-        <h2>Suggested Charts</h2>
-        <span>Ready for visualization</span>
-      </div>
-
-      <div class="charts-grid">
-        @for (chart of result.chart_suggestions; track chart.title) {
-          <div class="chart-card">
-            <span class="chart-type">{{ chart.type }}</span>
-            <h3>{{ chart.title }}</h3>
-            <p>X-axis: {{ chart.x_axis }}</p>
-            <p>Y-axis: {{ chart.y_axis }}</p>
+  <main class="dashboard-page" *ngIf="currentSheet">
+    <section class="dashboard-top">
+      <div class="dataset-info compact-info">
+        <div class="info-card">
+          <div class="info-content">
+            <span>عدد السجلات</span>
+            <strong>{{ currentSheet.row_count }}</strong>
           </div>
-        }
+
+          <span class="info-icon">
+            <img src="/icons/direct.svg" alt="" />
+          </span>
+        </div>
+
+        <div class="info-card">
+          <div class="info-content">
+            <span>عدد الأعمدة</span>
+            <strong>{{ currentSheet.column_count }}</strong>
+          </div>
+
+          <span class="info-icon">
+            <img src="/icons/row-horizontal.svg" alt="" />
+          </span>
+        </div>
+
+        <div class="info-card">
+          <div class="info-content">
+            <span>الشيت الحالي</span>
+            <strong>{{ selectedSheetName || '-' }}</strong>
+          </div>
+
+          <span class="info-icon">
+            <img src="/icons/files.svg" alt="" />
+          </span>
+        </div>
+
+        <div class="info-card">
+          <div class="info-content">
+            <span>حجم الملف</span>
+            <strong>{{ data.file_size || '-' }}</strong>
+          </div>
+
+          <span class="info-icon">
+            <img src="/icons/size-file.svg" alt="" />
+          </span>
+        </div>
+      </div>
+
+      <div class="file-card compact-file-card">
+        <span class="file-icon">
+          <img src="/icons/done-upload.svg" alt="" />
+        </span>
+
+        <div class="file-content">
+          <h1>{{ data.filename }}</h1>
+
+          <p>
+            <img src="/icons/tick-circle.svg" alt="" />
+            تم الرفع: {{ uploadedAgo }}
+          </p>
+        </div>
       </div>
     </section>
 
-    <section class="panel">
-      <div class="panel-header">
-        <h2>Data Preview</h2>
-        <span>First 5 rows</span>
+    <section class="big-number-grid" [class.kpi-count-1]="bigNumbers.length === 1"
+      [class.kpi-count-2]="bigNumbers.length === 2" [class.kpi-count-3]="bigNumbers.length === 3"
+      [class.kpi-count-4]="bigNumbers.length >= 4">
+      @for (kpi of bigNumbers; track kpi.label) {
+      <article class="big-number-card" [style.--kpi-color]="kpi.color" [style.--kpi-bg]="kpi.background">
+        <div class="kpi-icon">
+          <span class="kpi-glyph" [style.mask-image]="'url(' + kpi.icon + ')'"
+            [style.-webkit-mask-image]="'url(' + kpi.icon + ')'"></span>
+        </div>
+
+        <span>{{ kpi.label }}</span>
+        <strong>{{ kpi.value }}</strong>
+        <small>{{ kpi.description }}</small>
+      </article>
+      }
+    </section>
+
+    <section class="table-card">
+      <div class="section-head">
+        <div>
+          <h2>معاينة البيانات</h2>
+          <p>عرض أول صفوف من الشيت الحالي: {{ selectedSheetName }}</p>
+        </div>
+
+        <button type="button" (click)="openTableModal()">
+          <img src="/icons/arrow-right.svg" alt="" />
+          عرض كامل البيانات
+        </button>
       </div>
 
       <div class="table-wrapper">
         <table>
           <thead>
             <tr>
-              @for (col of getSampleColumns(); track col) {
-                <th>{{ col }}</th>
+              @for (col of currentSheet.columns.slice(0, 6); track col) {
+              <th>{{ col }}</th>
               }
             </tr>
           </thead>
 
           <tbody>
-            @for (row of result.sample_data; track $index) {
-              <tr>
-                @for (col of getSampleColumns(); track col) {
-                  <td>{{ row[col] }}</td>
-                }
-              </tr>
+            @for (row of currentSheet.sample_data; track $index) {
+            <tr>
+              @for (col of currentSheet.columns.slice(0, 6); track col) {
+              <td>{{ row[col] }}</td>
+              }
+            </tr>
             }
           </tbody>
         </table>
       </div>
     </section>
 
-  </div>
+    <section class="chart-builder-card">
+      <div class="chart-builder-layout">
+        <aside class="chart-settings-card">
+          <div class="chart-settings-head">
+            <span class="section-icon">
+              <img src="/icons/setting-draw.svg" alt="" />
+            </span>
+
+            <div>
+              <h2>إعدادات الرسم</h2>
+              <p>اختاري نوع الرسم والمحاور من الشيت الحالي.</p>
+            </div>
+          </div>
+
+          <div class="chart-controls">
+            <div class="chart-title-field">
+              <label>اسم الرسم</label>
+
+              <input type="text" [value]="chartTitle" (input)="onChartTitleChange($event)"
+                placeholder="ضع اسماً للرسم البياني" />
+            </div>
+
+            <app-dropdown [config]="chartTypeDropdown" (selectionChange)="onChartTypeChange($event)" />
+
+            <app-dropdown [config]="xAxisDropdown" (selectionChange)="onXAxisChange($event)" />
+
+            <app-dropdown [config]="yAxisDropdown" (selectionChange)="onYAxisChange($event)" />
+          </div>
+
+          <button type="button" class="export-chart-btn">
+            <img src="/icons/upload.svg" alt="" />
+            تصدير الرسم
+          </button>
+        </aside>
+
+        <div class="chart-preview-card">
+          <div class="chart-preview-head">
+            <div>
+              <h2 [class.placeholder-title]="!chartTitle?.trim()">
+                {{ chartTitle || chartSuggestions[0]?.title || 'ضع اسماً للرسم البياني' }}
+              </h2>
+            </div>
+          </div>
+
+          <div class="chart-view">
+            @if (chartSuggestions[0]) {
+            <app-smart-chart [config]="chartSuggestions[0]" />
+            }
+          </div>
+        </div>
+      </div>
+    </section>
+
+    @if (smartInsights) {
+    <section class="ai-insights">
+      <div class="section-head">
+        <div>
+          <h2>تقرير ذكي عن البيانات</h2>
+          <p>ملخص تلقائي للرؤى والملاحظات المهمة بناءً على أول شيت تم تحليله.</p>
+        </div>
+
+        <span class="section-icon">
+          <img src="/icons/ai.svg" alt="" />
+        </span>
+      </div>
+
+      <div class="insights-container">
+        <article class="insight-block summary-card">
+          <div class="insight-title">
+            <span>
+              <img src="/icons/reports-green.svg" alt="" />
+            </span>
+            <h3>الملخص التنفيذي</h3>
+          </div>
+
+          <p>{{ smartInsights.executive_summary }}</p>
+        </article>
+
+        <article class="insight-block points-card">
+          <div class="insight-title">
+            <span>
+              <img src="/icons/direct.svg" alt="" />
+            </span>
+            <h3>أبرز الملاحظات</h3>
+          </div>
+
+          <ul>
+            @for (insight of smartInsights.actionable_insights; track $index) {
+            <li>{{ insight }}</li>
+            }
+          </ul>
+        </article>
+
+        <article class="insight-block recommendation-card">
+          <div class="insight-title">
+            <span>
+              <img src="/icons/tick-circle.svg" alt="" />
+            </span>
+            <h3>التوصية المقترحة</h3>
+          </div>
+
+          <p>{{ smartInsights.recommendation }}</p>
+        </article>
+      </div>
+    </section>
+    }
+  </main>
+</div>
+
+@if (result && currentSheet) {
+  <app-data-table-modal
+    [isOpen]="isTableModalOpen"
+    [filename]="result.filename"
+    [activeSheet]="selectedSheetName"
+    [availableSheets]="result.available_sheets || []"
+    [columns]="currentSheet.columns || []"
+    [records]="currentSheet.records || []"
+    (close)="closeTableModal()"
+    (sheetChange)="onSheetChange($event)"
+  />
 }

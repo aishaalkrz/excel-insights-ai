@@ -1,0 +1,92 @@
+@if (isOpen) {
+<div class="modal-backdrop" dir="rtl" (click)="onBackdropClick($event)">
+    <section class="data-modal">
+        <header class="modal-header">
+            <div>
+                <h2>عرض كامل البيانات</h2>
+            </div>
+
+            <button type="button" class="close-btn" (click)="onClose()" aria-label="إغلاق">
+                <svg viewBox="0 0 24 24">
+                    <path d="M18 6L6 18" />
+                    <path d="M6 6L18 18" />
+                </svg>
+            </button>
+        </header>
+
+        @if (availableSheets.length > 1) {
+        <div class="sheet-tabs">
+            @for (sheet of availableSheets; track sheet) {
+            <button type="button" [class.active]="sheet === activeSheet" (click)="selectSheet(sheet)">
+                {{ sheet }}
+            </button>
+            }
+        </div>
+        }
+
+        <div class="table-info">
+            <span>الشيت الحالي: <strong>{{ activeSheet || '-' }}</strong></span>
+            <span>عدد الصفوف: <strong>{{ records.length }}</strong></span>
+            <span>عدد الأعمدة: <strong>{{ columns.length }}</strong></span>
+        </div>
+
+        <div class="modal-table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        @for (col of columns; track col) {
+                        <th>{{ col }}</th>
+                        }
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @for (row of pagedRecords; track $index) {
+                    <tr>
+                        @for (col of columns; track col) {
+                        <td>{{ row[col] }}</td>
+                        }
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <footer class="modal-footer">
+            <button type="button" class="page-btn" (click)="firstPage()" [disabled]="currentPage() === 1"
+                aria-label="الصفحة الأولى">
+                <svg viewBox="0 0 24 24">
+                    <path d="M18 6L12 12L18 18" />
+                    <path d="M12 6L6 12L12 18" />
+                </svg>
+            </button>
+
+            <button type="button" class="page-btn" (click)="prevPage()" [disabled]="currentPage() === 1"
+                aria-label="السابق">
+                <svg viewBox="0 0 24 24">
+                    <path d="M15 6L9 12L15 18" />
+                </svg>
+            </button>
+
+            <div class="pagination-range">
+                {{ pageStart }}-{{ pageEnd }} Of {{ records.length }}
+            </div>
+
+            <button type="button" class="page-btn" (click)="nextPage()" [disabled]="currentPage() === totalPages"
+                aria-label="التالي">
+                <svg viewBox="0 0 24 24">
+                    <path d="M9 6L15 12L9 18" />
+                </svg>
+            </button>
+
+            <button type="button" class="page-btn" (click)="lastPage()" [disabled]="currentPage() === totalPages"
+                aria-label="الصفحة الأخيرة">
+                <svg viewBox="0 0 24 24">
+                    <path d="M6 6L12 12L6 18" />
+                    <path d="M12 6L18 12L12 18" />
+                </svg>
+            </button>
+        </footer>
+    </section>
+</div>
+}

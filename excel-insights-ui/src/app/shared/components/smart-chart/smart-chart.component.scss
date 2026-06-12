@@ -1,0 +1,224 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+.smart-chart {
+  position: relative;
+  width: 100%;
+  min-height: 330px;
+  padding: 12px 12px 24px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: none;
+  overflow: visible;
+
+  .chart-wrapper {
+    position: relative;
+    width: 100%;
+    height: 430px;
+    overflow: visible;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+      display: block;
+    }
+
+    ::ng-deep {
+      .grid {
+        path.domain {
+          display: none;
+        }
+
+        line {
+          stroke: #CBD5E1;
+          stroke-opacity: 0.45;
+          stroke-width: 1px;
+          stroke-dasharray: 6 4;
+          shape-rendering: crispEdges;
+        }
+      }
+
+      .grid-x line {
+        stroke-opacity: 0.3;
+      }
+
+      .grid-y line {
+        stroke-opacity: 0.5;
+      }
+
+      .axis {
+        color: var(--text-primary);
+        font-size: 12px;
+        font-weight: 700;
+
+        path.domain {
+          stroke: #d8e4df;
+          stroke-width: 1.2;
+        }
+
+        line {
+          display: none;
+        }
+
+        text {
+          fill: var(--text-secondary);
+          font-size: 12px;
+          font-weight: 700;
+        }
+      }
+
+      .axis-x text {
+        font-size: 10px;
+      }
+
+      .axis-y text {
+        font-size: 11px;
+        transform: translateX(-12px);
+      }
+
+      .axis-label {
+        fill: var(--primary);
+        font-size: 14px;
+        font-weight: 800;
+      }
+
+      .bar {
+        transition: opacity 0.2s ease;
+
+        &:hover {
+          opacity: 0.82;
+        }
+      }
+
+      .line-path {
+        fill: none;
+        stroke: var(--primary);
+        stroke-width: 3.5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        filter: drop-shadow(0 6px 10px rgba(62, 123, 107, 0.14));
+      }
+
+      .scatter-dot {
+        cursor: pointer;
+      }
+    }
+  }
+
+  ::ng-deep {
+    .legend-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px 12px;
+
+      max-height: 75px;
+      overflow-y: auto;
+      margin-bottom: 15px;
+      padding: 5px 10px;
+
+      &::-webkit-scrollbar {
+        width: 4px;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background: #CBD5E1;
+        border-radius: 4px;
+      }
+
+      .legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background-color: rgba(0, 0, 0, 0.03);
+        }
+
+        span {
+          display: inline-block;
+          flex-shrink: 0;
+          /* لمنع الدائرة من الانضغاط */
+          width: 14px;
+          height: 14px;
+          border-radius: 50%;
+          box-sizing: border-box;
+          background-color: var(--item-color);
+          border: 2px solid var(--item-color);
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          transition: all 0.2s ease;
+        }
+
+        small {
+          color: #475569;
+          font-size: 13px;
+          font-weight: 700;
+          user-select: none;
+          pointer-events: none;
+          transition: color 0.2s ease;
+        }
+
+        &.hidden-item {
+          span {
+            background-color: transparent !important;
+            box-shadow: none;
+          }
+
+          small {
+            color: #94A3B8;
+          }
+        }
+
+        &:active span {
+          transform: scale(0.85);
+        }
+      }
+    }
+  }
+
+  ::ng-deep {
+    .chart-tooltip {
+      position: fixed;
+      pointer-events: none;
+      opacity: 0;
+      z-index: 99999;
+      min-width: max-content;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+      display: flex;
+      flex-direction: row-reverse;
+      /* لعكس ترتيب الاسم والرقم */
+      align-items: center;
+      gap: 8px;
+      transition: opacity 0.15s ease;
+
+      strong {
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      span {
+        color: #0f172a !important;
+        /* لون الرقم */
+        font-size: 13px !important;
+        /* حجم الرقم */
+        font-weight: 700 !important;
+        /* سماكة الرقم */
+        line-height: 1;
+        white-space: nowrap;
+      }
+    }
+  }
+}

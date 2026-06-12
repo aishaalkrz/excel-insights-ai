@@ -34,7 +34,7 @@ export class HomeComponent {
 
   analyzeData(): void {
     if (!this.selectedFile) {
-      this.errorMessage = 'Please upload an Excel or CSV file first.';
+      this.errorMessage = 'يرجى رفع ملف Excel أو CSV أولاً.';
       return;
     }
 
@@ -44,12 +44,13 @@ export class HomeComponent {
     this.excelService.uploadFile(this.selectedFile).subscribe({
       next: (response) => {
         this.analysisState.setResult(response);
+        localStorage.setItem('analysisResult', JSON.stringify(response));
         this.loading = false;
         this.router.navigate(['/dashboard']);
       },
       error: (error) => {
         console.error(error);
-        this.errorMessage = 'Something went wrong while analyzing the file.';
+        this.errorMessage = 'حدث خطأ أثناء تحليل الملف. يرجى المحاولة مرة أخرى.';
         this.loading = false;
       }
     });

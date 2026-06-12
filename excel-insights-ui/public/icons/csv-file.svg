@@ -1,0 +1,9 @@
+<svg width="76" height="105" viewBox="0 0 76 105" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M10 0H49.5L66 16.5V95C66 100.523 61.523 105 56 105H10C4.477 105 0 100.523 0 95V10C0 4.477 4.477 0 10 0Z" fill="#F7FBF8"/>
+  <path d="M49.5 0V14.5C49.5 17.814 52.186 20.5 55.5 20.5H66L49.5 0Z" fill="#C8E6D8"/>
+  <path d="M49.5 0V14.5C49.5 17.814 52.186 20.5 55.5 20.5H66" stroke="#B0D9C6" stroke-width="1.5" fill="none"/>
+  <rect x="8" y="36" width="50" height="34" rx="7" fill="#1D6F42"/>
+  <text x="33" y="59.5" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" font-weight="800" fill="white">CSV</text>
+  <path d="M15 82H51" stroke="#1D6F42" stroke-width="3" stroke-linecap="round"/>
+  <path d="M15 91H41" stroke="#C8E6D8" stroke-width="3" stroke-linecap="round"/>
+</svg>
