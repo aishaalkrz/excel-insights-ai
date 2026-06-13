@@ -14,6 +14,7 @@ import { FormsModule } from '@angular/forms';
 import * as htmlToImage from 'html-to-image';
 import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf'
+import { ToastService } from '../../shared/components/toast/toast.service';
 
 type MetricType =
   | 'revenue'
@@ -44,6 +45,7 @@ type MetricType =
 export class DashboardComponent implements OnInit {
   private analysisState = inject(AnalysisStateService);
   private router = inject(Router);
+  private toast = inject(ToastService);
 
   result: AnalysisResult | null = null;
 
@@ -480,7 +482,11 @@ export class DashboardComponent implements OnInit {
 
   exportChart(): void {
     const chartElement = document.querySelector('.chart-preview-card');
-    if (!(chartElement instanceof HTMLElement)) return;
+
+    if (!(chartElement instanceof HTMLElement)) {
+      this.toast.error('لم يتم العثور على الرسم');
+      return;
+    }
 
     const width = chartElement.offsetWidth;
     const height = chartElement.offsetHeight;
@@ -491,16 +497,17 @@ export class DashboardComponent implements OnInit {
       style: {
         backgroundColor: '#fff'
       },
-      filter: (node) => {
-        return true;
-      },
-      pixelRatio: 2 
+      pixelRatio: 2
     })
     .then((dataUrl) => {
-      saveAs(dataUrl, 'chart.png');
+      saveAs(dataUrl, 'basira-chart.png');
+
+      this.toast.success('تم تصدير الرسم بنجاح');
     })
     .catch((error) => {
       console.error('Error exporting chart:', error);
+
+      this.toast.error('فشل تصدير الرسم');
     });
   }
   exportDashboardPdf() {
@@ -543,6 +550,7 @@ export class DashboardComponent implements OnInit {
 
           pdf.addImage(dataUrl, 'PNG', x, y, renderWidth, renderHeight);
           pdf.save('basira-report.pdf');
+          this.toast.success('تم تصدير التقرير بنجاح');
 
           dashboardElement.classList.remove('pdf-mode');
         };
@@ -550,6 +558,7 @@ export class DashboardComponent implements OnInit {
       .catch((error) => {
         dashboardElement.classList.remove('pdf-mode');
         console.error('Error exporting dashboard PDF:', error);
+        this.toast.error('فشل تصدير التقرير');
       });
     }, 600);
   }
