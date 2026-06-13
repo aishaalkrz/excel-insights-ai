@@ -11,6 +11,9 @@ import { ChartConfig, ChartType } from '../../shared/models/chart-config.model';
 import { DropdownConfig } from '../../shared/components/dropdown/dropdown.model';
 import { DataTableModalComponent } from '../../shared/components/model/data-table-modal.component';
 import { FormsModule } from '@angular/forms';
+import * as htmlToImage from 'html-to-image';
+import { saveAs } from 'file-saver';
+import jsPDF from 'jspdf'
 
 type MetricType =
   | 'revenue'
@@ -473,5 +476,81 @@ export class DashboardComponent implements OnInit {
       case 'generic': return '/icons/Vector.svg'; 
       default: return '/icons/Vector.svg';
     }
+  }
+
+  exportChart(): void {
+    const chartElement = document.querySelector('.chart-preview-card');
+    if (!(chartElement instanceof HTMLElement)) return;
+
+    const width = chartElement.offsetWidth;
+    const height = chartElement.offsetHeight;
+
+    htmlToImage.toPng(chartElement, {
+      width,
+      height,
+      style: {
+        backgroundColor: '#fff'
+      },
+      filter: (node) => {
+        return true;
+      },
+      pixelRatio: 2 
+    })
+    .then((dataUrl) => {
+      saveAs(dataUrl, 'chart.png');
+    })
+    .catch((error) => {
+      console.error('Error exporting chart:', error);
+    });
+  }
+  exportDashboardPdf() {
+    const dashboardElement = document.getElementById('dashboard-export');
+
+    if (!(dashboardElement instanceof HTMLElement)) return;
+
+    dashboardElement.classList.add('pdf-mode');
+
+    setTimeout(() => {
+      htmlToImage.toPng(dashboardElement, {
+        backgroundColor: '#F7FAF9',
+        pixelRatio: 2,
+        cacheBust: true
+      })
+      .then((dataUrl) => {
+        const pdf = new jsPDF('p', 'mm', 'a4');
+
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+
+        const margin = 6;
+        const img = new Image();
+        img.src = dataUrl;
+
+        img.onload = () => {
+          const availableWidth = pageWidth - margin * 2;
+          const availableHeight = pageHeight - margin * 2;
+
+          const widthRatio = availableWidth / img.width;
+          const heightRatio = availableHeight / img.height;
+
+          const ratio = Math.min(widthRatio, heightRatio);
+
+          const renderWidth = img.width * ratio;
+          const renderHeight = img.height * ratio;
+
+          const x = (pageWidth - renderWidth) / 2;
+          const y = margin;
+
+          pdf.addImage(dataUrl, 'PNG', x, y, renderWidth, renderHeight);
+          pdf.save('basira-report.pdf');
+
+          dashboardElement.classList.remove('pdf-mode');
+        };
+      })
+      .catch((error) => {
+        dashboardElement.classList.remove('pdf-mode');
+        console.error('Error exporting dashboard PDF:', error);
+      });
+    }, 600);
   }
 }

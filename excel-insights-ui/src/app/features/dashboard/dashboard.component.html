@@ -5,7 +5,7 @@
     </div>
 
     <div class="header-actions">
-      <button type="button" class="header-export-btn">
+      <button type="button" class="header-export-btn" (click)="exportDashboardPdf()">
         <img src="/icons/upload.svg" alt="" />
         تصدير التقرير
       </button>
@@ -43,7 +43,7 @@
     </nav>
   </aside>
 
-  <main class="dashboard-page" *ngIf="currentSheet">
+  <main class="dashboard-page" *ngIf="currentSheet"  id="dashboard-export">
     <section class="dashboard-top">
       <div class="dataset-info compact-info">
         <div class="info-card">
@@ -179,7 +179,7 @@
             <app-dropdown [config]="yAxisDropdown" (selectionChange)="onYAxisChange($event)" />
           </div>
 
-          <button type="button" class="export-chart-btn">
+          <button type="button" class="export-chart-btn" (click)="exportChart()">
             <img src="/icons/upload.svg" alt="" />
             تصدير الرسم
           </button>
