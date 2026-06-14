@@ -6,7 +6,8 @@ app = FastAPI(title="Excel Insights API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4200"],
+    allow_origins=["http://localhost:4200",
+    "https://basira-analytics.netlify.app/"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
