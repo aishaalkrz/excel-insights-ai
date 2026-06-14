@@ -3,6 +3,7 @@ import { ExcelService } from '../../services/excel.service';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AnalysisStateService } from '../../services/analysis-state.service';
+import { ToastService } from '../../shared/components/toast/toast.service';
 
 @Component({
   selector: 'app-home',
@@ -19,6 +20,7 @@ export class HomeComponent {
   private excelService = inject(ExcelService);
   private analysisState = inject(AnalysisStateService);
   private router = inject(Router);
+  private toast = inject(ToastService);
 
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -35,6 +37,7 @@ export class HomeComponent {
   analyzeData(): void {
     if (!this.selectedFile) {
       this.errorMessage = 'يرجى رفع ملف Excel أو CSV أولاً.';
+      this.toast.error('يرجى رفع ملف Excel أو CSV أولاً');
       return;
     }
 
@@ -45,13 +48,21 @@ export class HomeComponent {
       next: (response) => {
         this.analysisState.setResult(response);
         localStorage.setItem('analysisResult', JSON.stringify(response));
+
         this.loading = false;
+
         this.router.navigate(['/dashboard']);
       },
+
       error: (error) => {
         console.error(error);
-        this.errorMessage = 'حدث خطأ أثناء تحليل الملف. يرجى المحاولة مرة أخرى.';
+
+        this.errorMessage =
+          'حدث خطأ أثناء تحليل الملف. يرجى المحاولة مرة أخرى.';
+
         this.loading = false;
+
+        this.toast.error('فشل تحليل الملف');
       }
     });
   }

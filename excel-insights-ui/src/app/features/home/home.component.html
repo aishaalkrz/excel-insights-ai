@@ -169,20 +169,43 @@
 
       <div class="hero-actions">
 
-        <button class="upload-btn" type="button" [class.file-selected]="selectedFile" (click)="fileInput.click()">
+        <button
+          class="upload-btn"
+          type="button"
+          [class.file-selected]="selectedFile"
+          [disabled]="loading"
+          (click)="fileInput.click()"
+        >
           {{ selectedFileName || 'رفع ملف Excel أو CSV' }}
 
-          <img [src]="selectedFile ? '/icons/tick-circle.svg' : '/icons/upload.svg'" alt="" />
+          <img
+            [src]="selectedFile ? '/icons/tick-circle.svg' : '/icons/upload.svg'"
+            alt=""
+          />
         </button>
 
-        @if (selectedFile) {
-        <button class="analyze-outline" type="button" (click)="analyzeData()" [disabled]="loading">
-          {{ loading ? 'جاري التحليل...' : 'حلّل بياناتك' }}
-          <img src="/icons/analyis.svg" alt="" />
+        <button
+          class="analyze-outline"
+          type="button"
+          (click)="analyzeData()"
+          [disabled]="!selectedFile"
+        >
+          @if (loading) {
+            <span class="btn-spinner"></span>
+            جاري تحليل البيانات...
+          } @else {
+            حلّل بياناتك
+            <img src="/icons/analyis.svg" alt="" />
+          }
         </button>
-        }
 
       </div>
+
+      @if (loading) {
+        <p class="loading-hint">
+          يتم الآن قراءة الملف وتحليل البيانات، قد يستغرق ذلك بضع ثوانٍ...
+        </p>
+      }
 
 
       @if (errorMessage) {

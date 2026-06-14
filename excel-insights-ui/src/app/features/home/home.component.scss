@@ -225,23 +225,39 @@
         color: #fff;
       }
 
-    .analyze-outline {
-      background: var(--primary);
-      border: 1px solid var(--primary);
-      color: #fff;
+      .analyze-outline {
+        background: var(--primary);
+        border: 1px solid var(--primary);
+        color: #fff;
 
-      animation: pulseAnalysis 1.8s infinite;
+        animation: pulseAnalysis 1.8s infinite;
 
-      &:hover {
-        transform: translateY(-2px);
-      }
+        &:hover {
+          transform: translateY(-2px);
+        }
 
-      img {
-        width: 19px;
-        height: 19px;
-        filter: brightness(0) invert(1);
-      }
-    
+        img {
+          width: 19px;
+          height: 19px;
+          filter: brightness(0) invert(1);
+        }
+
+        &:disabled {
+          background: transparent;
+          border: 1px solid rgba(62, 123, 107, 0.45);
+          color: rgba(62, 123, 107, 0.55);
+
+          animation: none;
+          box-shadow: none;
+          transform: none;
+          cursor: not-allowed;
+          opacity: 1;
+
+          img {
+            filter: none;
+            opacity: 0.45;
+          }
+        }
       }
 
       .upload-btn,
@@ -266,6 +282,30 @@
         width: 19px;
         height: 19px;
         object-fit: contain;
+      }
+    }
+    .loading-hint {
+      margin-top: 14px;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .btn-spinner {
+      width: 16px;
+      height: 16px;
+
+      border: 2px solid rgba(255, 255, 255, 0.35);
+      border-top-color: #fff;
+
+      border-radius: 50%;
+
+      animation: spin .8s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
       }
     }
     .error-message {

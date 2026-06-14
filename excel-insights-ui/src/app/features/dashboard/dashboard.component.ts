@@ -1,5 +1,5 @@
-import { Component, inject, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject, OnInit, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 
 import { AnalysisStateService } from '../../services/analysis-state.service';
@@ -46,6 +46,8 @@ export class DashboardComponent implements OnInit {
   private analysisState = inject(AnalysisStateService);
   private router = inject(Router);
   private toast = inject(ToastService);
+  private platformId = inject(PLATFORM_ID);
+  private isBrowser = isPlatformBrowser(this.platformId);
 
   result: AnalysisResult | null = null;
 
@@ -102,6 +104,8 @@ export class DashboardComponent implements OnInit {
   }[] = [];
 
   ngOnInit(): void {
+    if (!this.isBrowser) return;
+
     this.result =
       this.analysisState.getResult() ||
       JSON.parse(localStorage.getItem('analysisResult') || 'null');
@@ -160,6 +164,8 @@ export class DashboardComponent implements OnInit {
   }
 
   private setUploadedAgo(): void {
+    if (!this.isBrowser) return;
+    
     const uploadedAt =
       (this.result as any)?.uploaded_at ||
       localStorage.getItem('uploadedAt');
