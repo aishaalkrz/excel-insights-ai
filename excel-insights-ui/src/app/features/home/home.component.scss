@@ -743,6 +743,11 @@
     box-shadow: 0 0 0 0 rgba(62, 123, 107, 0);
   }
 }
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 /* =========================================
    Tablet
 ========================================= */
@@ -1138,6 +1143,19 @@
       box-shadow: 0 8px 20px rgba(62,123,107,.18);
     }
   }
+}
+.btn-spinner {
+  width: 18px;
+  height: 18px;
+
+  display: inline-block;
+  flex-shrink: 0;
+
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+
+  animation: spin 0.8s linear infinite;
 }
 
 @media (max-width: 992px) {
