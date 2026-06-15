@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AnalysisStateService } from '../../services/analysis-state.service';
 import { ToastService } from '../../shared/components/toast/toast.service';
+import { finalize } from 'rxjs';
 
 @Component({
   selector: 'app-home',
@@ -49,26 +50,27 @@ export class HomeComponent {
     this.loading = true;
     this.errorMessage = '';
 
-    this.excelService.uploadFile(this.selectedFile).subscribe({
-      next: (response) => {
-        this.analysisState.setResult(response);
-        localStorage.setItem('analysisResult', JSON.stringify(response));
+    this.excelService.uploadFile(this.selectedFile)
+      .pipe(
+        finalize(() => {
+          this.loading = false;
+        })
+      )
+      .subscribe({
+        next: (response) => {
+          this.analysisState.setResult(response);
+          localStorage.setItem('analysisResult', JSON.stringify(response));
+          this.router.navigate(['/dashboard']);
+        },
 
-        this.loading = false;
+        error: (error) => {
+          console.error(error);
 
-        this.router.navigate(['/dashboard']);
-      },
+          this.errorMessage =
+            'حدث خطأ أثناء تحليل الملف. يرجى المحاولة مرة أخرى.';
 
-      error: (error) => {
-        console.error(error);
-
-        this.errorMessage =
-          'حدث خطأ أثناء تحليل الملف. يرجى المحاولة مرة أخرى.';
-
-        this.loading = false;
-
-        this.toast.error('فشل تحليل الملف');
-      }
-    });
+          this.toast.error('فشل تحليل الملف');
+        }
+      });
   }
 }
