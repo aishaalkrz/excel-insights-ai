@@ -1,37 +1,70 @@
 <div class="landing-page" dir="rtl">
 
   <!-- Navbar -->
-  <nav class="navbar">
+<nav class="navbar">
 
-    <div class="brand">
-      <div class="logo-icon">
-        <img src="/icons/logo.svg" alt="Basira Logo" />
+  <div class="brand">
+    <div class="logo-icon">
+      <img src="/icons/logo.svg" alt="Basira Logo" />
+    </div>
+    <div class="brand-text">
+      <strong>بصيرة</strong>
+      <small>حوّل بياناتك إلى رؤى واضحة</small>
+    </div>
+  </div>
+
+  <ul class="nav-links">
+    <li class="active">الرئيسية</li>
+    <li>المميزات</li>
+    <li>كيف يعمل</li>
+    <li>الأسعار</li>
+  </ul>
+
+  <div class="nav-actions">
+    <button class="outline-btn">إنشاء حساب</button>
+    <button class="primary-btn">تسجيل الدخول</button>
+  </div>
+
+  <button class="menu-btn" type="button" (click)="toggleMenu()">
+     <img src="/icons/menu.svg" alt="menu" />
+  </button>
+
+</nav>
+
+<div class="mobile-menu" [class.open]="isMenuOpen">
+  <div class="mobile-menu-panel">
+
+    <div class="mobile-menu-header">
+
+      <div class="mobile-menu-brand">
+        <img src="/icons/logo.svg" alt="" />
+
+        <div>
+          <strong>بصيرة</strong>
+          <small>حوّل بياناتك إلى رؤى واضحة</small>
+        </div>
       </div>
-      <div class="brand-text">
-        <strong>بصيرة</strong>
-        <small>حوّل بياناتك إلى رؤى واضحة</small>
-      </div>
+
+      <button class="close-menu" type="button" (click)="toggleMenu()">
+        <img src="/icons/close.svg">
+      </button>
+
     </div>
 
-    <ul class="nav-links">
+    <ul>
       <li class="active">الرئيسية</li>
       <li>المميزات</li>
       <li>كيف يعمل</li>
       <li>الأسعار</li>
     </ul>
 
-    <div class="nav-actions">
-      <button class="outline-btn">
-        إنشاء حساب
-      </button>
-
-      <button class="primary-btn">
-        تسجيل الدخول
-      </button>
+    <div class="mobile-auth">
+      <button class="primary-btn">تسجيل الدخول</button>
+      <button class="outline-btn">إنشاء حساب</button>
     </div>
 
-  </nav>
-
+  </div>
+</div>
   <!-- Hero -->
   <main class="hero">
 
@@ -184,11 +217,12 @@
           />
         </button>
 
+      @if (selectedFile) {
         <button
           class="analyze-outline"
           type="button"
           (click)="analyzeData()"
-          [disabled]="!selectedFile"
+          [disabled]="loading"
         >
           @if (loading) {
             <span class="btn-spinner"></span>
@@ -198,7 +232,7 @@
             <img src="/icons/analyis.svg" alt="" />
           }
         </button>
-
+      }
       </div>
 
       @if (loading) {

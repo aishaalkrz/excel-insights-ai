@@ -22,6 +22,11 @@ export class HomeComponent {
   private router = inject(Router);
   private toast = inject(ToastService);
 
+  isMenuOpen = false;
+
+  toggleMenu() {
+    this.isMenuOpen = !this.isMenuOpen;
+  }
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
 
