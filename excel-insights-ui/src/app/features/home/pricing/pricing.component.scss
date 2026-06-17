@@ -1,0 +1,305 @@
+:host {
+  display: block;
+  background: #fff;
+}
+
+/* =========================
+   PAGE WRAPPER
+========================= */
+
+.pricing-page {
+  position: relative;
+  width: min(100%);
+  margin-inline: auto;
+  padding: 30px 40px 110px;
+  overflow: hidden;
+}
+
+/* =========================
+   BACKGROUND GLOW
+========================= */
+
+.hero-glow {
+  position: absolute;
+  top: -210px;
+  right: 50%;
+  transform: translateX(50%);
+  width: 950px;
+  height: 950px;
+  background: radial-gradient(
+    circle,
+    rgba(76, 167, 133, 0.25),
+    rgba(76, 167, 133, 0.1),
+    transparent 70%
+  );
+  filter: blur(120px);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+/* =========================
+   HERO
+========================= */
+
+.pricing-hero {
+  text-align: center;
+  max-width: 780px;
+  margin: 0 auto 80px;
+
+  span {
+    color: var(--primary);
+    font-weight: 800;
+    letter-spacing: 1px;
+  }
+
+  h1 {
+    font-size: 56px;
+    font-weight: 900;
+    margin: 30px 0;
+    line-height: 1.2;
+  }
+
+  p {
+    color: var(--text-secondary);
+    font-size: 16px;
+    line-height: 2;
+    max-width: 620px;
+    margin: 0 auto;
+  }
+}
+
+/* =========================
+   GRID
+========================= */
+
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 36px;
+}
+
+/* =========================
+   CARD BASE
+========================= */
+
+.pricing-card {
+  position: relative;
+  background: #fff;
+  border: 1px solid #e8f0ed;
+  border-radius: 26px;
+  padding: 38px 34px;
+  box-shadow: 0 18px 50px rgba(62, 123, 107, 0.08);
+  transition: all 0.35s ease;
+  overflow: hidden;
+
+  h2 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 800;
+  }
+
+  &:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 30px 70px rgba(62, 123, 107, 0.18);
+  }
+}
+
+/* =========================
+   FEATURED CARD
+========================= */
+
+.featured {
+  border: 2px solid rgba(76, 167, 133, 0.35);
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: -40%;
+    background: radial-gradient(
+      circle,
+      rgba(76, 167, 133, 0.08),
+      transparent 60%
+    );
+    opacity: 0.7;
+    pointer-events: none;
+  }
+}
+
+/* =========================
+   LOCKED CARD
+========================= */
+
+.locked {
+  opacity: 0.85;
+  filter: grayscale(0.2);
+
+  &::after {
+    content: "قريباً";
+    position: absolute;
+    top: 16px;
+    left: 16px;
+
+    background: #f3f4f6;
+    color: #6b7280;
+
+    padding: 6px 12px;
+    border-radius: 999px;
+
+    font-size: 12px;
+    font-weight: 800;
+  }
+}
+
+/* =========================
+   PRICE
+========================= */
+
+.price {
+  margin: 22px 0;
+  font-size: 50px;
+  font-weight: 900;
+  color: var(--primary);
+}
+
+.price-soon {
+  margin: 22px 0;
+  font-size: 32px;
+  font-weight: 800;
+  color: #9ca3af;
+}
+
+/* =========================
+   BADGES
+========================= */
+
+.plan-badge {
+  display: inline-flex;
+  margin-bottom: 18px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.future-badge {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+/* =========================
+   LIST ITEMS
+========================= */
+
+.pricing-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 22px 0 0;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    padding: 10px 0;
+    border-bottom: 1px solid #edf1ef;
+
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+}
+
+/* =========================
+   ICONS
+========================= */
+
+.icon {
+  width: 18px;
+  height: 18px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  img {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+  }
+}
+
+/* =========================
+   BUTTONS
+========================= */
+
+.primary-btn {
+  margin-top: 26px;
+  width: 100%;
+  height: 52px;
+
+  border: none;
+  border-radius: 12px;
+
+  background: linear-gradient(135deg, #3e7b6b, #4ca785);
+  color: #fff;
+
+  font-weight: 800;
+
+  cursor: pointer;
+
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 18px 40px rgba(62, 123, 107, 0.25);
+  }
+}
+
+.primary-btn.disabled {
+  background: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media (max-width: 992px) {
+  .pricing-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pricing-hero h1 {
+    font-size: 42px;
+  }
+}
+
+@media (max-width: 768px) {
+  .pricing-page {
+    position: relative;
+    width: 100%;
+
+    padding-inline: clamp(18px, 4vw, 80px);
+
+    margin-inline: auto;
+
+    padding-top: 30px;
+    padding-bottom: 110px;
+
+    overflow: hidden; 
+  }
+
+  .pricing-hero h1 {
+    margin-top: 30px;
+    font-size: 32px;
+  }
+
+  .pricing-card {
+    padding: 26px;
+  }
+}
