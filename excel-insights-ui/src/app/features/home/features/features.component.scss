@@ -7,7 +7,7 @@
   position: relative;
   width: min(100%);
   margin-inline: auto;
-  padding: 35px 40px 90px;
+  padding: 35px 30px 90px;
   overflow: hidden;
 }
 
@@ -34,8 +34,6 @@
   z-index: 2;
 
   max-width: 820px;
-
-  margin: 0 auto 54px;
 
   text-align: center;
 
@@ -177,8 +175,8 @@
 
 @media (max-width: 768px) {
   .features-page {
-    width: calc(100% - 28px);
-    padding: 20px 0 70px;
+    width: calc(100%);
+    padding: 20px 30px 70px;
   }
 
   .features-header {
