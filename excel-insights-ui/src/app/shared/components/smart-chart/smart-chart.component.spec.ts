@@ -37,6 +37,11 @@ describe('SmartChartComponent numeric null compatibility', () => {
       const methods = { bar: 'renderBarChart', line: 'renderLineChart', dot: 'renderDotChart', pie: 'renderPieChart' };
       const render = vi.spyOn(chart, methods[type]).mockImplementation(() => {});
       fixture.detectChanges();
+      if (type === 'pie') {
+        expect(render).not.toHaveBeenCalled();
+        expect(fixture.nativeElement.querySelector('[role="note"]').textContent).toContain('قيماً سالبة');
+        return;
+      }
       expect(render).toHaveBeenCalledWith([
         { x: 'zero', y: 0 }, { x: 'negative', y: -2 }, { x: 'valid', y: 5 },
       ], 'x', 'y');
@@ -67,7 +72,7 @@ describe('SmartChartComponent numeric null compatibility', () => {
     fixture.componentRef.setInput('config', {
       ...fixture.componentInstance.config, xScale: 'number',
     });
-    expect((fixture.componentInstance as any).getPlottableData()).toEqual([{ x: 0, y: 0 }]);
+    expect((fixture.componentInstance as any).getPlottableData()).toEqual([{ x: '0', y: 0 }]);
   });
 
   it('renders negative bars with positive height and preserves legitimate zero', async () => {

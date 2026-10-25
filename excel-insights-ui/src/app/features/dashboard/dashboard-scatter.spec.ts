@@ -152,4 +152,36 @@ describe('Dashboard scatter chart selection', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelectorAll('.scatter-point').length).toBe(3);
   });
+
+  it('uses all sheet records rather than the compact backend suggestion preview', async () => {
+    const records = Array.from({ length: 150 }, (_, i) => ({ Price: i, Quantity: i === 149 ? 10000 : 1 }));
+    const data: BuilderSheet = {
+      ...sheet(['Price', 'Quantity'], [], []), records,
+      chart_suggestions: [{
+        title: 'Full scatter', type: 'scatter', xKey: 'Price', yKey: 'Quantity',
+        data: records.slice(0, 100), isSampled: true, sourceRecordCount: 150,
+      }],
+    };
+    const { component, fixture } = await create(data);
+    expect(component.chartSuggestions[0].data).toHaveLength(150);
+    expect(component.chartSuggestions[0].data.at(-1)).toEqual(records.at(-1));
+    expect(component.chartSuggestions[0].isSampled).toBe(false);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('.scatter-point')).toHaveLength(150);
+  });
+
+  it('keeps full records for custom charts and resets them on sheet switching', async () => {
+    const first = sheet(['Price', 'Quantity']);
+    first.records = Array.from({ length: 200 }, (_, i) => ({ category: 'A', Price: i, Quantity: 1 }));
+    const second = sheet(['Price', 'Quantity']);
+    second.records = [{ category: 'B', Price: 1000, Quantity: 2 }];
+    const { component } = await create(first);
+    expect(component.chartSuggestions[0].data).toHaveLength(200);
+    component.onChartTypeChange('scatter');
+    expect(component.chartSuggestions[0].data).toHaveLength(200);
+    component.result = { sheets: { Second: second } } as unknown as AnalysisResult;
+    component.onSheetChange('Second');
+    expect(component.chartSuggestions[0].data).toEqual(second.records);
+    expect(component.chartTypeDropdown.selectedValue).toBe('bar');
+  });
 });

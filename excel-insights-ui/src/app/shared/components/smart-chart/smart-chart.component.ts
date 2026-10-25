@@ -6,10 +6,13 @@ import {
   OnChanges,
   SimpleChanges,
   ViewChild,
+  ChangeDetectorRef,
+  inject,
 } from '@angular/core';
 import * as d3 from 'd3';
 import { ChartConfig } from '../../models/chart-config.model';
 import { CommonModule } from '@angular/common';
+import { aggregateCategories, CATEGORY_LIMIT, evenlySample, numericAxis, numericValue, prepareChartPreview } from './chart-preview';
 
 @Component({
   selector: 'app-smart-chart',
@@ -31,6 +34,24 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
 
   private hiddenCategories = new Set<string>();
   private colorScale!: d3.ScaleOrdinal<string, string>;
+  private changeDetector = inject(ChangeDetectorRef);
+  private previewConfig?: ChartConfig;
+  private preview?: ReturnType<typeof prepareChartPreview>;
+
+  private getPreview() {
+    if (!this.preview || this.previewConfig !== this.config) {
+      this.previewConfig = this.config;
+      this.preview = prepareChartPreview(this.config ?? { type: 'bar', title: '', data: [] });
+    }
+    return this.preview;
+  }
+
+  get previewNotice(): string {
+    const preview = this.getPreview();
+    const key = this.config?.type === 'pie' ? this.config.categoryKey || this.config.xKey : this.config?.xKey;
+    const visible = preview.data.filter(row => !this.hiddenCategories.has(String(row[key ?? '']))).length;
+    return preview.notice + (this.hiddenCategories.size ? ` المعروض حالياً بعد إخفاء الفئات: ${visible}.` : '');
+  }
 
   private colors = [
     '#10B981', '#059669', '#34D399', '#047857', '#6EE7B7',
@@ -83,10 +104,6 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
 
     let chartData = fullData.filter(d => !this.hiddenCategories.has(String(d[catKey])));
 
-    if (['bar', 'line', 'pie','dot'].includes(this.config.type)) {
-      chartData = this.aggregateByCategory(chartData, catKey, valKey);
-    }
-
     if (!chartData.length) return;
 
     switch (this.config.type) {
@@ -109,36 +126,19 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
   }
 
   get hasPlottableData(): boolean {
-    return this.getPlottableData().length > 0;
+    const key = this.config?.type === 'pie' ? this.config.categoryKey || this.config.xKey : this.config?.xKey;
+    return this.getPlottableData().some(row => !this.hiddenCategories.has(String(row[key ?? ''])));
   }
 
   private getPlottableData(): Record<string, unknown>[] {
-    const catKey = this.config?.type === 'pie'
-      ? (this.config.categoryKey || this.config.xKey) : this.config?.xKey;
-    const valKey = this.config?.type === 'pie'
-      ? (this.config.valueKey || this.config.yKey) : this.config?.yKey;
-    if (!catKey || !valKey) return [];
-
-    const data = (this.config.data ?? []).filter(row =>
-      row[catKey] != null && String(row[catKey]).trim() !== '' &&
-      ((this.config.type !== 'scatter' && this.config.xScale !== 'number') || this.getValue(row, catKey) !== null) &&
-      this.getValue(row, valKey) !== null
-    );
-
-    // Scatter uses individual records, even when repeated X values would overflow a sum.
-    if (this.config.type === 'scatter') return data;
-
-    // Validate category totals before rendering, legend creation, and empty-state checks.
-    const validCategories = new Set(
-      this.aggregateByCategory(data, catKey, valKey).map(row => String(row[catKey]))
-    );
-    return data.filter(row => validCategories.has(String(row[catKey])));
+    return this.getPreview().data;
   }
 
   private renderInteractiveLegend(fullData: any[], catKey: string): void {
     if (!this.legendContainer || !this.config.showLegend) return;
 
     const uniqueCategories = Array.from(new Set(fullData.map(d => String(d[catKey]))));
+    if (uniqueCategories.length > CATEGORY_LIMIT) return;
     const legend = d3.select(this.legendContainer.nativeElement);
 
     const items = legend.selectAll('.legend-item')
@@ -153,6 +153,7 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
             this.hiddenCategories.add(d);
          }
          this.renderChart();
+         this.changeDetector.markForCheck();
       });
 
       items.append('span')
@@ -178,10 +179,7 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
   }
 
   private getValue(d: Record<string, unknown>, key: string): number | null {
-    const raw = d[key];
-    if (raw == null || (typeof raw === 'string' && raw.trim() === '')) return null;
-    const value = Number(raw);
-    return Number.isFinite(value) ? value : null;
+    return numericValue(d, key);
   }
 
   private formatTooltip(label: unknown, value: unknown, color: string): string {
@@ -198,13 +196,11 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
 
     const chart = svg.append('g').attr('transform', `translate(${this.margin.left},${this.margin.top})`);
     const x = d3.scaleBand().domain(data.map((d) => String(d[catKey]))).range([0, innerWidth]).padding(0.32);
-    const y = d3.scaleLinear().domain([
-      Math.min(0, d3.min(data, d => this.getValue(d, valKey)!) ?? 0),
-      Math.max(0, d3.max(data, d => this.getValue(d, valKey)!) ?? 0),
-    ]).nice().range([innerHeight, 0]);
+    const yAxis = numericAxis(this.getPreview().domainData, valKey, [innerHeight, 0], true);
+    const y = yAxis.project;
 
-    this.drawGrid(chart, x as any, y, innerWidth, innerHeight);
-    this.drawAxes(chart, x as any, y, innerHeight);
+    this.drawGrid(chart, x as any, yAxis.scale, innerWidth, innerHeight);
+    this.drawAxes(chart, x as any, yAxis.scale, innerHeight, yAxis);
     this.drawAxisLabels(svg);
 
     chart.selectAll('.bar')
@@ -233,13 +229,11 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
 
     const chart = svg.append('g').attr('transform', `translate(${this.margin.left},${this.margin.top})`);
     const x = d3.scalePoint().domain(data.map((d: any) => String(d[catKey]))).range([0, innerWidth]).padding(0.5);
-    const y = d3.scaleLinear().domain([
-      Math.min(0, d3.min(data, d => this.getValue(d, valKey)!) ?? 0),
-      Math.max(0, d3.max(data, d => this.getValue(d, valKey)!) ?? 0),
-    ]).nice().range([innerHeight, 0]);
+    const yAxis = numericAxis(this.getPreview().domainData, valKey, [innerHeight, 0], true);
+    const y = yAxis.project;
 
-    this.drawGrid(chart, x as any, y, innerWidth, innerHeight);
-    this.drawAxes(chart, x as any, y, innerHeight);
+    this.drawGrid(chart, x as any, yAxis.scale, innerWidth, innerHeight);
+    this.drawAxes(chart, x as any, yAxis.scale, innerHeight, yAxis);
     this.drawAxisLabels(svg);
 
     const line = d3.line<Record<string, unknown>>()
@@ -284,13 +278,11 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
 
     const chart = svg.append('g').attr('transform', `translate(${this.margin.left},${this.margin.top})`);
     const x = d3.scalePoint().domain(data.map((d: any) => String(d[catKey]))).range([0, innerWidth]).padding(0.5);
-    const y = d3.scaleLinear().domain([
-      Math.min(0, d3.min(data, d => this.getValue(d, valKey)!) ?? 0),
-      Math.max(0, d3.max(data, d => this.getValue(d, valKey)!) ?? 0),
-    ]).nice().range([innerHeight, 0]);
+    const yAxis = numericAxis(this.getPreview().domainData, valKey, [innerHeight, 0], true);
+    const y = yAxis.project;
 
-    this.drawGrid(chart, x as any, y, innerWidth, innerHeight);
-    this.drawAxes(chart, x as any, y, innerHeight);
+    this.drawGrid(chart, x as any, yAxis.scale, innerWidth, innerHeight);
+    this.drawAxes(chart, x as any, yAxis.scale, innerHeight, yAxis);
     this.drawAxisLabels(svg);
 
     chart.selectAll('.scatter-dot')
@@ -315,28 +307,9 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
     const svg = this.createSvg();
     const { innerWidth, innerHeight } = this.getInnerSize();
     const chart = svg.append('g').attr('transform', `translate(${this.margin.left},${this.margin.top})`);
-    const createScale = (key: string, range: [number, number]) => {
-      const [min, max] = d3.extent(data, row => this.getValue(row, key)!) as [number, number];
-      const magnitude = Math.max(Math.abs(min), Math.abs(max));
-      // Keep ordinary domains unchanged. Normalize near numeric limits so domain
-      // subtraction, singleton padding, and D3 tick generation stay finite.
-      const factor = magnitude > Number.MAX_VALUE / 16 || (magnitude > 0 && magnitude < 1e-300)
-        ? magnitude : 1;
-      const low = min / factor;
-      const high = max / factor;
-      const padding = low === high ? Math.abs(low) * 0.05 || 1 : 0;
-      const scale = d3.scaleLinear().domain([low - padding, high + padding]).nice().range(range);
-      // A padded MAX_VALUE domain can extend beyond representable original
-      // values. Omit those ticks rather than multiplying them into Infinity.
-      const limit = Number.MAX_VALUE / factor;
-      const ticks = scale.ticks(6).filter(value => Math.abs(value) <= limit);
-      return {
-        scale, factor, ticks,
-        format: (value: d3.NumberValue) => d3.format('~g')(Number(value) * factor),
-      };
-    };
-    const x = createScale(xKey, [0, innerWidth]);
-    const y = createScale(yKey, [innerHeight, 0]);
+    const domainData = this.getPreview().domainData;
+    const x = numericAxis(domainData, xKey, [0, innerWidth]);
+    const y = numericAxis(domainData, yKey, [innerHeight, 0]);
 
     this.drawGrid(chart, x.scale, y.scale, innerWidth, innerHeight);
     chart.append('g').attr('class', 'axis axis-x')
@@ -370,7 +343,8 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
     const radius = Math.min(this.width, this.height) / 2 - 40;
 
     const chart = svg.append('g').attr('transform', `translate(${this.width / 2},${this.height / 2})`);
-    const pie = d3.pie<Record<string, unknown>>().sort(null).value((d) => this.getValue(d, valKey)!);
+    const magnitude = d3.max(data, row => Math.abs(this.getValue(row, valKey)!)) || 1;
+    const pie = d3.pie<Record<string, unknown>>().sort(null).value((d) => this.getValue(d, valKey)! / magnitude);
     const arc = d3.arc<d3.PieArcDatum<Record<string, unknown>>>().innerRadius(0).outerRadius(radius);
 
     chart.selectAll('path')
@@ -393,40 +367,26 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
 
   private drawGrid(chart: any, x: any, y: any, innerWidth: number, innerHeight: number): void {
     chart.append('g').attr('class', 'grid grid-y').call(d3.axisLeft(y).ticks(5).tickSize(-innerWidth).tickFormat(() => ''));
-    chart.append('g').attr('class', 'grid grid-x').attr('transform', `translate(0,${innerHeight})`).call(d3.axisBottom(x).tickSize(-innerHeight).tickFormat(() => ''));
+    const xGrid = d3.axisBottom(x).tickSize(-innerHeight).tickFormat(() => '');
+    if (x.domain().length > CATEGORY_LIMIT) xGrid.tickValues(evenlySample<d3.AxisDomain>(x.domain(), 12));
+    chart.append('g').attr('class', 'grid grid-x').attr('transform', `translate(0,${innerHeight})`).call(xGrid);
   }
 
-  private drawAxes(chart: any, x: any, y: any, innerHeight: number): void {
-    chart.append('g').attr('class', 'axis axis-x').attr('transform', `translate(0,${innerHeight})`).call(d3.axisBottom(x).tickSizeOuter(0)).selectAll('text')
+  private drawAxes(chart: any, x: any, y: any, innerHeight: number, numericY: ReturnType<typeof numericAxis>): void {
+    const xAxis = d3.axisBottom(x).tickSizeOuter(0);
+    if (x.domain().length > CATEGORY_LIMIT) xAxis.tickValues(evenlySample<d3.AxisDomain>(x.domain(), 12));
+    chart.append('g').attr('class', 'axis axis-x').attr('transform', `translate(0,${innerHeight})`).call(xAxis).selectAll('text')
     .attr('transform', 'translate(-30, 20) rotate(-29)').attr('text-anchor', 'end').attr('dx', '-0.45em').attr('dy', '0.75em').attr('font-size','8px');
     chart
       .append('g')
       .attr('class', 'axis axis-y')
       .call(
-        d3.axisLeft(y)
-          .ticks(6)
-          .tickSizeOuter(0)
-          .tickFormat((d: any) => {
-            if (d >= 1000) return (d / 1000) + 'k';
-            return d;
-          })
+        d3.axisLeft<number>(y).tickValues(numericY.ticks).tickSizeOuter(0).tickFormat(numericY.format)
       )
   }
 
   private aggregateByCategory(data: any[], catKey: string, valKey: string): any[] {
-    const map = new Map<string, number>();
-
-    for (const row of data) {
-      const value = this.getValue(row, valKey);
-      if (row[catKey] == null || String(row[catKey]).trim() === '' || value === null) continue;
-      const key = String(row[catKey]);
-      map.set(key, (map.get(key) ?? 0) + value);
-    }
-
-    return Array.from(map.entries()).filter(([, value]) => Number.isFinite(value)).map(([key, value]) => ({
-      [catKey]: key,
-      [valKey]: value,
-    }));
+    return aggregateCategories(data, catKey, valKey);
   }
   private drawAxisLabels(svg: any): void {
     if (this.config.xAxisLabel) svg.append('text').attr('class', 'axis-label x-label').attr('x', this.width / 2).attr('y', this.height + 32).attr('text-anchor', 'middle').text(this.config.xAxisLabel);

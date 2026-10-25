@@ -236,7 +236,9 @@ export class DashboardComponent implements OnInit {
         {
           ...suggestedChart,
           showLegend: true,
-          data: this.currentSheet.records?.slice(0, 100) || [],
+          data: this.currentSheet.records || [],
+          isSampled: false,
+          sourceRecordCount: this.currentSheet.records?.length ?? 0,
         },
       ];
 
@@ -332,7 +334,7 @@ export class DashboardComponent implements OnInit {
       this.currentSheet.numeric_columns?.includes(yKey)
     )) return;
 
-    const chartData = this.currentSheet.records.slice(0, 100);
+    const chartData = this.currentSheet.records;
 
     this.chartSuggestions = [
       {

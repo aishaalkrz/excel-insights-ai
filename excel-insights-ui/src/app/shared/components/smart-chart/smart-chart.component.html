@@ -1,5 +1,9 @@
 <div class="smart-chart">
 
+  @if (previewNotice) {
+    <p class="chart-data-notice" role="note">{{ previewNotice }}</p>
+  }
+
   <div #legendContainer class="legend-container"></div>
 
   @if (!hasPlottableData) {

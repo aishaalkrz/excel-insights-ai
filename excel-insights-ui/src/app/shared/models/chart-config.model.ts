@@ -7,6 +7,8 @@ export interface ChartConfig {
   title: string;
 
   data: Record<string, unknown>[];
+  sourceRecordCount?: number;
+  isSampled?: boolean;
 
   xKey?: string;
   yKey?: string;
