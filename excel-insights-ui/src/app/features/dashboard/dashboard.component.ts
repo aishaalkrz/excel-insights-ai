@@ -67,11 +67,11 @@ export class DashboardComponent implements OnInit {
     grouped: false,
     showIcons: true,
     options: [
-      { label: 'أعمدة', value: 'bar', icon: '/charts/bar.svg' },
-      { label: 'خط', value: 'line', icon: '/charts/line.svg' },
-      { label: 'نقاط', value: 'dot', icon: '/charts/dot.svg' },
-      { label: 'تشتت', value: 'scatter', icon: '/charts/dot.svg' },
-      { label: 'دائري', value: 'pie', icon: '/charts/pie.svg' },
+      { label: 'Bar', value: 'bar', icon: '/charts/bar.svg' },
+      { label: 'Line', value: 'line', icon: '/charts/line.svg' },
+      { label: 'Dot', value: 'dot', icon: '/charts/dot.svg' },
+      { label: 'Scatter', value: 'scatter', icon: '/charts/dot.svg' },
+      { label: 'Pie', value: 'pie', icon: '/charts/pie.svg' },
     ],
   };
 
@@ -211,32 +211,12 @@ export class DashboardComponent implements OnInit {
 
     const suggestedChart = this.currentSheet.chart_suggestions?.[0];
 
-    const numericCols = this.currentSheet.numeric_columns ?? [];
-    const identifierColumns = new Set(
-      (this.currentSheet.field_metadata ?? [])
-        .filter((field: AnalysisResult['field_metadata'][number]) => field.is_identifier === true)
-        .map((field: AnalysisResult['field_metadata'][number]) => field.name)
-    );
-    const measureCols = numericCols.filter((col: string) => !identifierColumns.has(col));
-
-    const xCols = [
-      ...(this.currentSheet.text_columns ?? []),
-      ...(this.currentSheet.date_columns ?? []),
-      ...(this.currentSheet.numeric_columns ?? []),
-    ];
+    const { numericCols, measureCols, xCols, defaultXKey } = this.getAxisColumns();
 
     this.xAxisDropdown = {
       ...this.xAxisDropdown,
-      options: xCols.map((col: string) => ({
-        label: col,
-        value: col,
-        dataType: this.currentSheet.date_columns?.includes(col)
-          ? 'date'
-          : this.currentSheet.numeric_columns?.includes(col)
-            ? 'number'
-            : 'text',
-      })),
-      selectedValue: suggestedChart?.xKey ?? xCols.find((col: string) => !identifierColumns.has(col)) ?? '',
+      options: this.toXAxisOptions(suggestedChart?.type === 'scatter' ? numericCols : xCols),
+      selectedValue: suggestedChart?.xKey ?? defaultXKey,
     };
 
     this.yAxisDropdown = {
@@ -272,6 +252,72 @@ export class DashboardComponent implements OnInit {
     this.buildChartFromSelection();
   }
 
+  private getAxisColumns() {
+    const numericCols: string[] = this.currentSheet?.numeric_columns ?? [];
+    const identifierColumns = new Set(
+      (this.currentSheet?.field_metadata ?? [])
+        .filter((field: AnalysisResult['field_metadata'][number]) => field.is_identifier === true)
+        .map((field: AnalysisResult['field_metadata'][number]) => field.name)
+    );
+    const measureCols = numericCols.filter((col: string) => !identifierColumns.has(col));
+    const xCols: string[] = [
+      ...(this.currentSheet?.text_columns ?? []),
+      ...(this.currentSheet?.date_columns ?? []),
+      ...numericCols,
+    ];
+    const defaultXKey = xCols.find((col: string) => !identifierColumns.has(col)) ?? '';
+
+    return { numericCols, measureCols, xCols, defaultXKey };
+  }
+
+  private toXAxisOptions(cols: string[]): DropdownConfig<string>['options'] {
+    return cols.map((col: string) => ({
+      label: col,
+      value: col,
+      dataType: this.currentSheet.date_columns?.includes(col)
+        ? 'date'
+        : this.currentSheet.numeric_columns?.includes(col)
+          ? 'number'
+          : 'text',
+    }));
+  }
+
+  // Scatter plots one numeric value against another: restrict X to numeric
+  // columns, keep valid numeric selections, and fill gaps with distinct measures.
+  private applyScatterAxes(): void {
+    const { numericCols, measureCols } = this.getAxisColumns();
+    const isNumeric = (col?: string) => !!col && numericCols.includes(col);
+    const pickMeasure = (exclude: string) => measureCols.find(col => col !== exclude) ?? '';
+
+    const currentY = this.yAxisDropdown.selectedValue;
+    const currentX = this.xAxisDropdown.selectedValue;
+    let yKey = isNumeric(currentY) ? currentY! : '';
+    let xKey = isNumeric(currentX) && currentX !== yKey ? currentX! : '';
+    if (!yKey) yKey = pickMeasure(xKey);
+    if (!xKey) xKey = pickMeasure(yKey);
+
+    this.xAxisDropdown = {
+      ...this.xAxisDropdown,
+      options: this.toXAxisOptions(numericCols),
+      selectedValue: xKey,
+    };
+    this.yAxisDropdown = { ...this.yAxisDropdown, selectedValue: yKey };
+  }
+
+  private restoreCategoryAxes(): void {
+    const { measureCols, xCols, defaultXKey } = this.getAxisColumns();
+    const currentX = this.xAxisDropdown.selectedValue;
+
+    this.xAxisDropdown = {
+      ...this.xAxisDropdown,
+      options: this.toXAxisOptions(xCols),
+      selectedValue: currentX && xCols.includes(currentX) ? currentX : defaultXKey,
+    };
+    if (!this.yAxisDropdown.selectedValue) {
+      this.yAxisDropdown = { ...this.yAxisDropdown, selectedValue: measureCols[0] ?? '' };
+    }
+  }
+
   private buildChartFromSelection(): void {
     this.chartSuggestions = [];
     if (!this.currentSheet?.records?.length) return;
@@ -281,6 +327,10 @@ export class DashboardComponent implements OnInit {
     const yKey = this.yAxisDropdown.selectedValue;
 
     if (!type || !xKey || !yKey) return;
+    if (type === 'scatter' && !(
+      this.currentSheet.numeric_columns?.includes(xKey) &&
+      this.currentSheet.numeric_columns?.includes(yKey)
+    )) return;
 
     const chartData = this.currentSheet.records.slice(0, 100);
 
@@ -315,10 +365,17 @@ export class DashboardComponent implements OnInit {
   }
 
   onChartTypeChange(value: ChartType): void {
+    const previousType = this.chartTypeDropdown.selectedValue;
     this.chartTypeDropdown = {
       ...this.chartTypeDropdown,
       selectedValue: value,
     };
+
+    if (value === 'scatter') {
+      this.applyScatterAxes();
+    } else if (previousType === 'scatter') {
+      this.restoreCategoryAxes();
+    }
 
     this.buildChartFromSelection();
   }

@@ -198,6 +198,8 @@
           <div class="chart-view">
             @if (chartSuggestions[0]) {
             <app-smart-chart [config]="chartSuggestions[0]" />
+            } @else if (chartTypeDropdown.selectedValue === 'scatter') {
+            <div class="no-results" role="status">يتطلب رسم التشتت عمودين رقميين. اختر عموداً رقمياً لكل من المحور X والمحور Y.</div>
             } @else {
             <div class="no-results" role="status">لا توجد مقاييس رقمية متاحة للرسم. اختر الأعمدة يدوياً.</div>
             }
