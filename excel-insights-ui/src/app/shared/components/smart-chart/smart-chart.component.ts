@@ -57,6 +57,8 @@ const AXIS_TITLE_BAND = 28;
 const X_LABEL_ANGLE = 40;
 const LEGEND_COLLAPSED_LIMIT = 12;
 const LONG_NOTICE_LENGTH = 110;
+// Single-series marks (line, its markers and tooltip swatch) use the brand token.
+const SERIES_COLOR = 'var(--primary)';
 const RTL_TEXT = /[֐-ࣿיִ-﷿ﹰ-﻿]/;
 
 @Component({
@@ -400,32 +402,62 @@ export class SmartChartComponent implements AfterViewInit, OnChanges, OnDestroy 
     }
   }
 
+  // Dates and numbers sit on continuous axes so gaps and distances are true to
+  // the data; text categories keep evenly spaced points. Dense lines drop the
+  // per-point markers and use a hover overlay that snaps to the nearest point.
   private renderLineChart(data: any[], catKey: string, valKey: string): void {
-    const yProbe = numericAxis(this.getPreview().domainData, valKey, [this.frame().innerHeight, 0], true);
-    const domain = this.categoryLayout(data, catKey, yProbe);
-    const svg = this.createSvg();
-    const { innerWidth, innerHeight } = this.getInnerSize();
+    const domainData = this.getPreview().domainData;
+    const continuous = this.config.xScale === 'time' || this.config.xScale === 'number';
+    const yProbe = numericAxis(domainData, valKey, [this.frame().innerHeight, 0], true);
+    const yLabels = yProbe.ticks.map(tick => String(yProbe.format(tick)));
 
-    const chart = this.plotGroup(svg);
-    const x = d3.scalePoint().domain(domain).range([0, innerWidth]).padding(0.5);
-    const yAxis = numericAxis(this.getPreview().domainData, valKey, [innerHeight, 0], true);
-    const y = yAxis.project;
+    let px: (d: Record<string, unknown>) => number;
+    let chart: d3.Selection<SVGGElement, unknown, null, undefined>;
+    let svg: d3.Selection<SVGSVGElement, unknown, null, undefined>;
+    let yAxis: ReturnType<typeof numericAxis>;
 
-    this.drawGrid(chart, x as any, yAxis.scale, innerWidth, innerHeight, yAxis.ticks);
-    this.drawAxes(chart, x as any, yAxis.scale, innerHeight, yAxis);
+    if (continuous) {
+      const x = this.continuousX(data, catKey);
+      const tickCount = (width: number) => Math.max(2, Math.floor(width / 90));
+      const probeWidth = this.frame().width - 90;
+      const probeTicks = x.ticks(x.scale(probeWidth), tickCount(probeWidth));
+      this.layout = this.computeLayout(yLabels, { labels: probeTicks.map(x.format), count: probeTicks.length, edge: true });
+      svg = this.createSvg();
+      const { innerWidth, innerHeight } = this.getInnerSize();
+      chart = this.plotGroup(svg);
+      const scale = x.scale(innerWidth);
+      const ticks = x.ticks(scale, tickCount(innerWidth));
+      yAxis = numericAxis(domainData, valKey, [innerHeight, 0], true);
+      px = d => scale(x.value(d));
+
+      this.drawGrid(chart, scale, yAxis.scale, innerWidth, innerHeight, yAxis.ticks, ticks);
+      chart.append('g').attr('class', 'axis axis-x').attr('transform', `translate(0,${innerHeight})`)
+        .call(d3.axisBottom(scale as d3.AxisScale<number>).tickValues(ticks).tickSizeOuter(0).tickFormat(x.format));
+      this.drawYAxis(chart, yAxis);
+    } else {
+      const domain = this.categoryLayout(data, catKey, yProbe);
+      svg = this.createSvg();
+      const { innerWidth, innerHeight } = this.getInnerSize();
+      chart = this.plotGroup(svg);
+      const x = d3.scalePoint().domain(domain).range([0, innerWidth]).padding(0.5);
+      yAxis = numericAxis(domainData, valKey, [innerHeight, 0], true);
+      px = d => x(String(d[catKey])) ?? 0;
+
+      this.drawGrid(chart, x as any, yAxis.scale, innerWidth, innerHeight, yAxis.ticks);
+      this.drawAxes(chart, x as any, yAxis.scale, innerHeight, yAxis);
+    }
     this.drawAxisLabels(svg);
 
-    const line = d3.line<Record<string, unknown>>()
-      .x((d) => x(String(d[catKey])) ?? 0)
-      .y((d) => y(this.getValue(d, valKey)!))
-      .curve(d3.curveLinear);
+    const { innerWidth, innerHeight } = this.getInnerSize();
+    const py = (d: Record<string, unknown>) => yAxis.project(this.getValue(d, valKey)!);
+    const line = d3.line<Record<string, unknown>>().x(px).y(py).curve(d3.curveLinear);
 
     const path = chart.append('path')
       .datum(data)
       .attr('class', 'line-path')
       .attr('d', line)
       .attr('fill', 'none')
-      .attr('stroke-width', 4)
+      .attr('stroke-width', 3)
       .attr('stroke-linecap', 'round')
       .attr('stroke-linejoin', 'round');
 
@@ -437,19 +469,83 @@ export class SmartChartComponent implements AfterViewInit, OnChanges, OnDestroy 
         .transition().duration(850).attr('stroke-dashoffset', 0);
     }
 
-    chart.selectAll('.line-dot')
-      .data(data)
-      .enter().append('circle')
-      .attr('cx', d => x(String(d[catKey])) ?? 0)
-      .attr('cy', d => y(this.getValue(d, valKey)!))
+    // Category colours only mean something while the legend explains them.
+    const byCategory = this.getLegend().length > 0;
+    const colorOf = (d: Record<string, unknown>) => byCategory ? this.colorScale(String(d[catKey])) : null;
+    const tooltipFor = (d: Record<string, unknown>) =>
+      [{ label: d[catKey], value: d[valKey], color: colorOf(d) ?? SERIES_COLOR }];
+    const dense = data.length > Math.max(12, innerWidth / 14);
+
+    if (!dense) {
+      chart.selectAll('.line-dot')
+        .data(data)
+        .enter().append('circle')
+        .attr('class', byCategory ? 'line-dot' : 'line-dot line-dot--series')
+        .attr('cx', px)
+        .attr('cy', py)
+        .attr('r', 5)
+        .attr('fill', d => colorOf(d))
+        .attr('stroke', '#fff')
+        .attr('stroke-width', 2)
+        .on('mousemove', (event, d) => this.showTooltip(event, tooltipFor(d)))
+        .on('mouseleave', () => this.hideTooltip());
+      return;
+    }
+
+    const focus = chart.append('circle')
+      .attr('class', 'line-focus')
       .attr('r', 5)
-      .attr('fill', d => this.colorScale(String(d[catKey])))
       .attr('stroke', '#fff')
       .attr('stroke-width', 2)
-      .on('mousemove', (event, d) =>
-        this.showTooltip(event, [{ label: d[catKey], value: d[valKey], color: this.colorScale(String(d[catKey])) }])
-      )
-      .on('mouseleave', () => this.hideTooltip());
+      .style('display', 'none');
+    const xs = data.map(px);
+    const nearest = d3.bisector((value: number) => value).center;
+    chart.append('rect')
+      .attr('class', 'line-overlay')
+      .attr('width', innerWidth)
+      .attr('height', innerHeight)
+      .attr('fill', 'transparent')
+      .on('mousemove', (event: MouseEvent) => {
+        const d = data[nearest(xs, d3.pointer(event)[0])];
+        if (!d) return;
+        focus.style('display', null).attr('cx', px(d)).attr('cy', py(d)).style('fill', colorOf(d) ?? SERIES_COLOR);
+        this.showTooltip(event, tooltipFor(d));
+      })
+      .on('mouseleave', () => {
+        focus.style('display', 'none');
+        this.hideTooltip();
+      });
+  }
+
+  // Continuous X for line charts: UTC time for dates, the shared numeric axis
+  // (with its overflow-safe scaling) for numbers.
+  private continuousX(data: Record<string, unknown>[], key: string) {
+    if (this.config.xScale === 'time') {
+      const times = data.map(d => Date.parse(String(d[key])));
+      let [start, end] = d3.extent(times) as [number, number];
+      if (start === end) {
+        start -= 43_200_000;
+        end += 43_200_000;
+      }
+      const day = 86_400_000;
+      const format = d3.utcFormat(end - start > 3 * 365 * day ? '%Y' : end - start > 90 * day ? '%Y-%m' : '%Y-%m-%d');
+      return {
+        value: (d: Record<string, unknown>) => Date.parse(String(d[key])),
+        scale: (width: number) => d3.scaleUtc().domain([start, end]).range([0, width]) as unknown as d3.ScaleLinear<number, number>,
+        ticks: (scale: d3.ScaleLinear<number, number>, count: number) => {
+          const ticks = scale.ticks(count).map(Number);
+          return ticks.length > count + 2 ? evenlySample(ticks, count) : ticks;
+        },
+        format: (value: d3.NumberValue) => format(new Date(Number(value))),
+      };
+    }
+    const axis = numericAxis(data, key, [0, 1]);
+    return {
+      value: (d: Record<string, unknown>) => this.getValue(d, key)! / axis.factor,
+      scale: (width: number) => axis.scale.copy().range([0, width]),
+      ticks: (_scale: d3.ScaleLinear<number, number>, _count: number) => axis.ticks,
+      format: (value: d3.NumberValue) => String(axis.format(value)),
+    };
   }
 
   private renderDotChart(data: any[], catKey: string, valKey: string): void {
@@ -570,12 +666,13 @@ export class SmartChartComponent implements AfterViewInit, OnChanges, OnDestroy 
     }
   }
 
-  private drawGrid(chart: any, x: any, y: any, innerWidth: number, innerHeight: number, yTicks?: number[]): void {
+  private drawGrid(chart: any, x: any, y: any, innerWidth: number, innerHeight: number, yTicks?: number[], xTicks?: number[]): void {
     const yGrid = d3.axisLeft(y).tickSize(-innerWidth).tickFormat(() => '');
     if (yTicks) yGrid.tickValues(yTicks); else yGrid.ticks(5);
     chart.append('g').attr('class', 'grid grid-y').call(yGrid);
     const xGrid = d3.axisBottom(x).tickSize(-innerHeight).tickFormat(() => '');
-    if (typeof x.bandwidth === 'function' || typeof x.step === 'function') xGrid.tickValues(this.categoryTicks(x.domain()));
+    if (xTicks) xGrid.tickValues(xTicks);
+    else if (typeof x.bandwidth === 'function' || typeof x.step === 'function') xGrid.tickValues(this.categoryTicks(x.domain()));
     chart.append('g').attr('class', 'grid grid-x').attr('transform', `translate(0,${innerHeight})`).call(xGrid);
   }
 
@@ -602,12 +699,16 @@ export class SmartChartComponent implements AfterViewInit, OnChanges, OnDestroy 
     labels.each(function (this: SVGTextElement, value: unknown) {
       if ([...String(value)].length > maxChars) d3.select(this).append('title').text(String(value));
     });
+    this.drawYAxis(chart, numericY);
+  }
+
+  private drawYAxis(chart: any, numericY: ReturnType<typeof numericAxis>): void {
     chart
       .append('g')
       .attr('class', 'axis axis-y')
       .call(
-        d3.axisLeft<number>(y).tickValues(numericY.ticks).tickSizeOuter(0).tickFormat(numericY.format)
-      )
+        d3.axisLeft<number>(numericY.scale).tickValues(numericY.ticks).tickSizeOuter(0).tickFormat(numericY.format)
+      );
   }
 
   private aggregateByCategory(data: any[], catKey: string, valKey: string): any[] {

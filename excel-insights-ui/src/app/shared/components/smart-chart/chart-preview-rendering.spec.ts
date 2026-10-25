@@ -50,9 +50,11 @@ describe('Bounded chart preview rendering', () => {
           x: new Date(Date.UTC(2020, 0, i + 1)).toISOString().slice(0, 10), y: i,
         })),
       });
-      const points = fixture.nativeElement.querySelectorAll('.chart-wrapper svg circle');
-      expect(points.length).toBeGreaterThan(0);
-      expect(points.length).toBeLessThanOrEqual(500);
+      // Dense lines draw no per-point markers, so count the path's vertices.
+      const vertices = fixture.nativeElement.querySelector('.line-path').getAttribute('d').split(/[ML]/).filter(Boolean);
+      expect(vertices.length).toBeGreaterThan(0);
+      expect(vertices.length).toBeLessThanOrEqual(500);
+      expect(fixture.nativeElement.querySelectorAll('.chart-wrapper svg .line-dot')).toHaveLength(0);
       expect(fixture.nativeElement.querySelectorAll('.axis-x .tick').length).toBeLessThanOrEqual(12);
       expect(fixture.nativeElement.querySelectorAll('.grid-x .tick').length).toBeLessThanOrEqual(12);
       expect(fixture.nativeElement.querySelector('[role="note"]').textContent).toContain('معاينة مخفّضة');

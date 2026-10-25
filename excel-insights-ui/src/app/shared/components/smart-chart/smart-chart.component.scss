@@ -212,9 +212,24 @@
     .line-path {
       fill: none;
       stroke: ds.color('primary');
-      stroke-width: 3.5;
+      stroke-width: 3;
       stroke-linecap: round;
       stroke-linejoin: round;
+    }
+
+    // Single-series markers follow the line colour; category-coloured markers
+    // set their own fill only while a legend explains the colours.
+    .line-dot--series {
+      fill: ds.color('primary');
+    }
+
+    .line-dot,
+    .line-overlay {
+      cursor: crosshair;
+    }
+
+    .line-focus {
+      pointer-events: none;
     }
 
     .scatter-dot {
