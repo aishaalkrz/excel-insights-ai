@@ -104,9 +104,12 @@ class AiKpiTests(unittest.TestCase):
     def call_mocked_ai(self, sheet, cards):
         config = types.ModuleType("core.config")
         config.client = Mock()
+        config.client.with_options.return_value = config.client
         config.client.chat.completions.create.return_value = types.SimpleNamespace(choices=[
             types.SimpleNamespace(message=types.SimpleNamespace(content=json.dumps({
-                "kpi_cards": cards, "smart_insights": {"executive_summary": "Mock only"},
+                "kpi_cards": [{"label": "Mock", "description": "Mock", "metricType": "general", **card}
+                              for card in cards],
+                "smart_insights": {"executive_summary": "Mock only", "actionable_insights": [], "recommendation": "Mock only"},
             })))
         ])
         with patch.dict(sys.modules, {"core.config": config}), patch(

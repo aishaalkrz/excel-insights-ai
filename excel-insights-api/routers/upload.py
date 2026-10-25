@@ -105,12 +105,12 @@ async def upload_excel(file: UploadFile = File(...)):
         )
         raise
 
-    except Exception as e:
+    except Exception:
         logger.exception(
             "Unexpected error while processing upload | filename=%s",
             file.filename
         )
         raise HTTPException(
             status_code=500,
-            detail=f"An error occurred while processing the file: {str(e)}"
+            detail="An error occurred while processing the file. Please try again."
         )

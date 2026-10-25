@@ -25,4 +25,26 @@ describe('Dashboard nullable KPI rendering', () => {
       .map((el: any) => el.textContent.trim());
     expect(values).toEqual(['—', '0', '-5', '42']);
   });
+
+  it('displays calculated KPIs when AI is unavailable', async () => {
+    vi.spyOn(DashboardComponent.prototype, 'ngOnInit').mockImplementation(() => {});
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    await TestBed.configureTestingModule({
+      imports: [DashboardComponent], providers: [provideRouter([])],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(DashboardComponent);
+    const component = fixture.componentInstance;
+    component.result = {} as AnalysisResult;
+    component.currentSheet = {
+      columns: [], records: [], row_count: 0, column_count: 0,
+      ai_insights: { status: 'unavailable', smart_insights: null },
+      numeric_kpis: { price: { sum: 0, average: -2.5, max: 10, min: null } },
+    };
+    (component as any).buildBigNumbers();
+    fixture.detectChanges();
+    const values = [...fixture.nativeElement.querySelectorAll('.big-number-card strong')]
+      .map((el: any) => el.textContent.trim());
+    expect(values).toEqual(['0', '-2.5', '10', '—']);
+    expect(fixture.nativeElement.querySelector('.ai-insights')).toBeNull();
+  });
 });

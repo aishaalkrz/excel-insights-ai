@@ -1,6 +1,12 @@
 import json
 import math
-from core.config import client
+
+from core.logger import logger
+
+
+def unavailable_ai_insights():
+    # Omitting kpi_cards activates Angular's existing calculated-KPI fallback.
+    return {"status": "unavailable", "smart_insights": None}
 
 
 def generate_ai_insights(
@@ -76,31 +82,57 @@ JSON STRUCTURE:
 }}
 """
 
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        response_format={"type": "json_object"},
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "You are an expert data analyst. "
-                    "You must output valid JSON only. "
-                    "Always write content values in Arabic. "
-                    "Never invent columns or chart data."
-                )
-            },
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        temperature=0.2
-    )
+    try:
+        # Client initialization can fail when credentials are missing. Keep it
+        # inside the optional-AI boundary rather than preventing API startup.
+        from core.config import client
 
-    ai_insights_text = response.choices[0].message.content
+        response = client.with_options(timeout=15.0, max_retries=0).chat.completions.create(
+            model="gpt-4o-mini",
+            response_format={"type": "json_object"},
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are an expert data analyst. "
+                        "You must output valid JSON only. "
+                        "Always write content values in Arabic. "
+                        "Never invent columns or chart data."
+                    )
+                },
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.2
+        )
+        ai_insights_text = response.choices[0].message.content
+    except Exception:
+        logger.warning("AI insights unavailable; returning calculated analysis")
+        return unavailable_ai_insights()
 
     try:
         result = json.loads(ai_insights_text)
+        if not isinstance(result, dict) or not isinstance(result.get("kpi_cards"), list):
+            raise ValueError("Invalid AI response structure")
+        insights = result.get("smart_insights")
+        if (
+            not isinstance(insights, dict)
+            or not isinstance(insights.get("executive_summary"), str)
+            or not isinstance(insights.get("recommendation"), str)
+            or not isinstance(insights.get("actionable_insights"), list)
+            or not all(isinstance(item, str) for item in insights["actionable_insights"])
+        ):
+            raise ValueError("Invalid AI insights structure")
+        for card in result["kpi_cards"]:
+            if (
+                not isinstance(card, dict)
+                or not all(isinstance(card.get(key), str) for key in (
+                    "column", "statistic", "label", "description", "metricType"
+                ))
+                or isinstance(card.get("value"), bool)
+                or not isinstance(card.get("value"), (int, float))
+                or not math.isfinite(card["value"])
+            ):
+                raise ValueError("Invalid AI KPI structure")
         cards = []
         seen_columns = set()
         for card in result.get("kpi_cards", []) or []:
@@ -121,9 +153,10 @@ JSON STRUCTURE:
             seen_columns.add(column)
             if len(cards) == max_cards:
                 break
+        if eligible_columns and not cards:
+            return unavailable_ai_insights()
         result["kpi_cards"] = cards
         return result
     except Exception:
-        return {
-            "raw_response": ai_insights_text
-        }
+        logger.warning("AI response unusable; returning calculated analysis")
+        return unavailable_ai_insights()
