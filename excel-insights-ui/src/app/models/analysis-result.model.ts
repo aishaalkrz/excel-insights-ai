@@ -16,10 +16,10 @@ export interface AnalysisResult {
   date_columns: string[];
 
   numeric_kpis: Record<string, {
-    sum: number;
-    average: number;
-    min: number;
-    max: number;
+    sum: number | null;
+    average: number | null;
+    min: number | null;
+    max: number | null;
   }>;
 
   categorical_summary: Record<string, Record<string, number>>;

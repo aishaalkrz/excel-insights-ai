@@ -95,7 +95,7 @@ export class DashboardComponent implements OnInit {
 
   bigNumbers: {
     label: string;
-    value: string | number;
+    value: string | number | null;
     description: string;
     metricType: MetricType;
     icon: string;
@@ -404,7 +404,7 @@ export class DashboardComponent implements OnInit {
 
   private createKpiCard(
     label: string,
-    value: string | number,
+    value: string | number | null,
     description: string,
     metricType: MetricType
   ) {

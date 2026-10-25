@@ -8,6 +8,7 @@ from services.file_service import read_uploaded_file
 from services.sheet_service import process_sheet
 from services.ai_service import generate_ai_insights
 from utils.formatters import format_file_size
+from utils.json_values import finite_json_values
 
 router = APIRouter()
 
@@ -71,7 +72,7 @@ async def upload_excel(file: UploadFile = File(...)):
             duration
         )
 
-        return {
+        return finite_json_values({
             "filename": file.filename,
             "active_sheet": active_sheet_name,
             "available_sheets": available_sheets,
@@ -95,7 +96,7 @@ async def upload_excel(file: UploadFile = File(...)):
             "uploaded_at": uploaded_at,
             "file_size": format_file_size(file_size),
             "file_size_bytes": file_size
-        }
+        })
 
     except HTTPException:
         logger.exception(

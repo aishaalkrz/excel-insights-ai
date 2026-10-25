@@ -48,7 +48,7 @@ class ColumnClassificationTests(unittest.TestCase):
                 self.assertTrue(pd.isna(df.loc[1, "date"]))
                 records = process_sheet("Sales", df)["records"]
                 self.assertEqual(records[0]["date"], "2026-01-01")
-                self.assertEqual(records[1], {"date": "", "amount": "", "category": ""})
+                self.assertEqual(records[1], {"date": "", "amount": None, "category": ""})
 
     def test_text_dates_keep_existing_conversion_threshold(self):
         df = pd.DataFrame({

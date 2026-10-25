@@ -64,14 +64,14 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
   }
 
   private renderChart(): void {
-    if (!this.config?.data?.length) return;
-
     d3.select(this.chartContainer.nativeElement).selectAll('*').remove();
     if (this.legendContainer) {
       d3.select(this.legendContainer.nativeElement).selectAll('*').remove();
     }
 
-    const fullData = this.config.data;
+    this.hideTooltip();
+    const fullData = this.getPlottableData();
+    if (!fullData.length) return;
     
     const catKey = String(this.config.type === 'pie' ? (this.config.categoryKey || this.config.xKey) : this.config.xKey);
     const valKey = String(this.config.type === 'pie' ? (this.config.valueKey || this.config.yKey) : this.config.yKey);
@@ -103,6 +103,30 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
         this.renderDotChart(chartData, catKey, valKey);
         break;
     }
+  }
+
+  get hasPlottableData(): boolean {
+    return this.getPlottableData().length > 0;
+  }
+
+  private getPlottableData(): Record<string, unknown>[] {
+    const catKey = this.config?.type === 'pie'
+      ? (this.config.categoryKey || this.config.xKey) : this.config?.xKey;
+    const valKey = this.config?.type === 'pie'
+      ? (this.config.valueKey || this.config.yKey) : this.config?.yKey;
+    if (!catKey || !valKey) return [];
+
+    const data = (this.config.data ?? []).filter(row =>
+      row[catKey] != null && String(row[catKey]).trim() !== '' &&
+      (this.config.xScale !== 'number' || this.getValue(row, catKey) !== null) &&
+      this.getValue(row, valKey) !== null
+    );
+
+    // Validate category totals before rendering, legend creation, and empty-state checks.
+    const validCategories = new Set(
+      this.aggregateByCategory(data, catKey, valKey).map(row => String(row[catKey]))
+    );
+    return data.filter(row => validCategories.has(String(row[catKey])));
   }
 
   private renderInteractiveLegend(fullData: any[], catKey: string): void {
@@ -147,9 +171,11 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
     };
   }
 
-  private getValue(d: Record<string, unknown>, key: string): number {
-    const value = Number(d[key]);
-    return Number.isFinite(value) ? value : 0;
+  private getValue(d: Record<string, unknown>, key: string): number | null {
+    const raw = d[key];
+    if (raw == null || (typeof raw === 'string' && raw.trim() === '')) return null;
+    const value = Number(raw);
+    return Number.isFinite(value) ? value : null;
   }
 
   private formatTooltip(label: unknown, value: unknown, color: string): string {
@@ -166,7 +192,10 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
 
     const chart = svg.append('g').attr('transform', `translate(${this.margin.left},${this.margin.top})`);
     const x = d3.scaleBand().domain(data.map((d) => String(d[catKey]))).range([0, innerWidth]).padding(0.32);
-    const y = d3.scaleLinear().domain([0, d3.max(data, (d) => this.getValue(d, valKey)) || 0]).nice().range([innerHeight, 0]);
+    const y = d3.scaleLinear().domain([
+      Math.min(0, d3.min(data, d => this.getValue(d, valKey)!) ?? 0),
+      Math.max(0, d3.max(data, d => this.getValue(d, valKey)!) ?? 0),
+    ]).nice().range([innerHeight, 0]);
 
     this.drawGrid(chart, x as any, y, innerWidth, innerHeight);
     this.drawAxes(chart, x as any, y, innerHeight);
@@ -178,7 +207,7 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
       .append('rect')
       .attr('class', 'bar')
       .attr('x', (d) => x(String(d[catKey])) ?? 0)
-      .attr('y', innerHeight)
+      .attr('y', y(0))
       .attr('width', x.bandwidth())
       .attr('height', 0)
       .attr('rx', 8)
@@ -188,8 +217,8 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
       )
       .on('mouseleave', () => this.hideTooltip())
       .transition().duration(700)
-      .attr('y', (d) => y(this.getValue(d, valKey)))
-      .attr('height', (d) => innerHeight - y(this.getValue(d, valKey)));
+      .attr('y', (d) => y(Math.max(0, this.getValue(d, valKey)!)))
+      .attr('height', (d) => Math.abs(y(0) - y(this.getValue(d, valKey)!)));
   }
 
   private renderLineChart(data: any[], catKey: string, valKey: string): void {
@@ -198,7 +227,10 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
 
     const chart = svg.append('g').attr('transform', `translate(${this.margin.left},${this.margin.top})`);
     const x = d3.scalePoint().domain(data.map((d: any) => String(d[catKey]))).range([0, innerWidth]).padding(0.5);
-    const y = d3.scaleLinear().domain([0, d3.max(data, (d) => this.getValue(d, valKey)) || 0]).nice().range([innerHeight, 0]);
+    const y = d3.scaleLinear().domain([
+      Math.min(0, d3.min(data, d => this.getValue(d, valKey)!) ?? 0),
+      Math.max(0, d3.max(data, d => this.getValue(d, valKey)!) ?? 0),
+    ]).nice().range([innerHeight, 0]);
 
     this.drawGrid(chart, x as any, y, innerWidth, innerHeight);
     this.drawAxes(chart, x as any, y, innerHeight);
@@ -206,7 +238,7 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
 
     const line = d3.line<Record<string, unknown>>()
       .x((d) => x(String(d[catKey])) ?? 0)
-      .y((d) => y(this.getValue(d, valKey)))
+      .y((d) => y(this.getValue(d, valKey)!))
       .curve(d3.curveLinear);
 
     const path = chart.append('path')
@@ -229,7 +261,7 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
       .data(data)
       .enter().append('circle')
       .attr('cx', d => x(String(d[catKey])) ?? 0)
-      .attr('cy', d => y(this.getValue(d, valKey)))
+      .attr('cy', d => y(this.getValue(d, valKey)!))
       .attr('r', 5)
       .attr('fill', d => this.colorScale(String(d[catKey])))
       .attr('stroke', '#fff')
@@ -246,7 +278,10 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
 
     const chart = svg.append('g').attr('transform', `translate(${this.margin.left},${this.margin.top})`);
     const x = d3.scalePoint().domain(data.map((d: any) => String(d[catKey]))).range([0, innerWidth]).padding(0.5);
-    const y = d3.scaleLinear().domain([0, d3.max(data, (d) => this.getValue(d, valKey)) || 0]).nice().range([innerHeight, 0]);
+    const y = d3.scaleLinear().domain([
+      Math.min(0, d3.min(data, d => this.getValue(d, valKey)!) ?? 0),
+      Math.max(0, d3.max(data, d => this.getValue(d, valKey)!) ?? 0),
+    ]).nice().range([innerHeight, 0]);
 
     this.drawGrid(chart, x as any, y, innerWidth, innerHeight);
     this.drawAxes(chart, x as any, y, innerHeight);
@@ -257,7 +292,7 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
       .enter().append('circle')
       .attr('class', 'scatter-dot')
       .attr('cx', (d) => x(String(d[catKey])) ?? 0)
-      .attr('cy', (d) => y(this.getValue(d, valKey)))
+      .attr('cy', (d) => y(this.getValue(d, valKey)!))
       .attr('r', 0)
       .attr('fill', (d) => this.colorScale(String(d[catKey])))
       .attr('stroke', '#fff')
@@ -275,7 +310,7 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
     const radius = Math.min(this.width, this.height) / 2 - 40;
 
     const chart = svg.append('g').attr('transform', `translate(${this.width / 2},${this.height / 2})`);
-    const pie = d3.pie<Record<string, unknown>>().sort(null).value((d) => this.getValue(d, valKey));
+    const pie = d3.pie<Record<string, unknown>>().sort(null).value((d) => this.getValue(d, valKey)!);
     const arc = d3.arc<d3.PieArcDatum<Record<string, unknown>>>().innerRadius(0).outerRadius(radius);
 
     chart.selectAll('path')
@@ -322,12 +357,13 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
     const map = new Map<string, number>();
 
     for (const row of data) {
-      const key = String(row[catKey]);
       const value = this.getValue(row, valKey);
+      if (row[catKey] == null || String(row[catKey]).trim() === '' || value === null) continue;
+      const key = String(row[catKey]);
       map.set(key, (map.get(key) ?? 0) + value);
     }
 
-    return Array.from(map.entries()).map(([key, value]) => ({
+    return Array.from(map.entries()).filter(([, value]) => Number.isFinite(value)).map(([key, value]) => ({
       [catKey]: key,
       [valKey]: value,
     }));

@@ -2,6 +2,10 @@
 
   <div #legendContainer class="legend-container"></div>
 
+  @if (!hasPlottableData) {
+    <div class="no-results" role="status">لا توجد نتائج</div>
+  }
+
   <div class="chart-wrapper" #chartContainer></div>
   
   <div #tooltip class="chart-tooltip"></div>

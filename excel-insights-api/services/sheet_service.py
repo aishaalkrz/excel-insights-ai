@@ -1,5 +1,7 @@
 import pandas as pd
 
+from utils.json_values import finite_json_values
+
 
 def detect_column_types(df: pd.DataFrame):
     columns = df.columns.tolist()
@@ -46,40 +48,39 @@ def prepare_records(df: pd.DataFrame, date_columns: list[str]):
             errors="coerce"
         ).dt.strftime("%Y-%m-%d")
 
-    return records_df.fillna("").to_dict(orient="records")
+    # Preserve numeric missing values for JSON null; keep text/date placeholders.
+    for col in records_df.select_dtypes(exclude="number").columns:
+        records_df[col] = records_df[col].fillna("")
+
+    records_df = records_df.astype(object).where(records_df.notna(), None)
+    return finite_json_values(records_df.to_dict(orient="records"))
 
 
 def prepare_sample_data(df: pd.DataFrame, date_columns: list[str]):
-    sample_df = df.head(5).copy()
-
-    for col in date_columns:
-        sample_df[col] = pd.to_datetime(
-            sample_df[col],
-            errors="coerce"
-        ).dt.strftime("%Y-%m-%d")
-
-    return sample_df.fillna("").to_dict(orient="records")
+    return prepare_records(df.head(5), date_columns)
 
 
 def generate_numeric_kpis(df: pd.DataFrame, numeric_columns: list[str]):
     numeric_kpis = {}
 
     for col in numeric_columns:
+        values = df[col].replace([float("inf"), float("-inf")], float("nan"))
         numeric_kpis[col] = {
-            "sum": round(float(df[col].sum()), 2),
-            "average": round(float(df[col].mean()), 2),
-            "min": round(float(df[col].min()), 2),
-            "max": round(float(df[col].max()), 2)
+            "sum": round(float(values.sum(min_count=1)), 2) if values.notna().any() else None,
+            "average": round(float(values.mean()), 2) if values.notna().any() else None,
+            "min": round(float(values.min()), 2) if values.notna().any() else None,
+            "max": round(float(values.max()), 2) if values.notna().any() else None
         }
 
-    return numeric_kpis
+    return finite_json_values(numeric_kpis)
 
 
 def generate_summary_stats(df: pd.DataFrame, numeric_columns: list[str]):
     if not numeric_columns:
         return {}
 
-    return df[numeric_columns].describe().fillna(0).to_dict()
+    values = df[numeric_columns].replace([float("inf"), float("-inf")], float("nan"))
+    return finite_json_values(values.describe().to_dict())
 
 
 def generate_categorical_summary(df: pd.DataFrame, text_columns: list[str]):
