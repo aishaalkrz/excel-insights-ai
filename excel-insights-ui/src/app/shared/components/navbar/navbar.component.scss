@@ -146,12 +146,28 @@
 
 .primary-btn {
   @include ds.button-primary;
+  min-width: 125px;
+  border-radius: 6px;
+  font-size: 15px;
+
+  &:hover:not(:disabled) {
+    background: ds.color('primary');
+  }
 }
 
 .outline-btn {
+  min-width: 125px;
+  border-radius: 6px;
+  font-size: 15px;
   background: ds.color('surface');
   border: 1px solid ds.color('primary');
   color: ds.color('primary');
+
+  &:hover:not(:disabled) {
+    background: ds.color('surface');
+    border-color: ds.color('primary');
+    color: ds.color('primary');
+  }
 }
 
 /* =========================================
