@@ -17,7 +17,7 @@ def detect_column_types(df: pd.DataFrame):
         converted = pd.to_datetime(df[col], errors="coerce")
 
         if converted.notna().sum() > len(df) * 0.6:
-            df[col] = converted
+            # Keep the original values; parsing is only for type inference.
             date_columns.append(col)
             text_columns.remove(col)
 
@@ -43,10 +43,9 @@ def prepare_records(df: pd.DataFrame, date_columns: list[str]):
     records_df = df.copy()
 
     for col in date_columns:
-        records_df[col] = pd.to_datetime(
-            records_df[col],
-            errors="coerce"
-        ).dt.strftime("%Y-%m-%d")
+        parsed = pd.to_datetime(records_df[col], errors="coerce")
+        formatted = parsed.dt.strftime("%Y-%m-%d")
+        records_df[col] = formatted.where(parsed.notna(), records_df[col])
 
     # Preserve numeric missing values for JSON null; keep text/date placeholders.
     for col in records_df.select_dtypes(exclude="number").columns:
