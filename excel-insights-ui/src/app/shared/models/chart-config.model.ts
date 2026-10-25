@@ -1,4 +1,4 @@
-export type ChartType = 'bar' | 'line' | 'pie' | 'dot';
+export type ChartType = 'bar' | 'line' | 'pie' | 'dot' | 'scatter';
 export type ChartScale = 'category' | 'number' | 'time';
 
 export interface ChartConfig {

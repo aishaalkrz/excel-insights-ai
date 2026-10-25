@@ -27,7 +27,7 @@ describe('SmartChartComponent numeric null compatibility', () => {
     ]);
   });
 
-  it.each(['bar', 'line', 'dot', 'pie'] as ChartType[])(
+  it.each(['bar', 'line', 'dot', 'pie'] as Exclude<ChartType, 'scatter'>[])(
     'passes only valid data to the %s renderer and legend', async type => {
       const fixture = await create([
         { x: 'missing', y: null }, { x: null, y: 30 },
@@ -94,7 +94,7 @@ describe('SmartChartComponent numeric null compatibility', () => {
     ]);
   });
 
-  it.each(['bar', 'line', 'dot', 'pie'] as ChartType[])(
+  it.each(['bar', 'line', 'dot', 'pie'] as Exclude<ChartType, 'scatter'>[])(
     'does not send overflowing totals to the %s renderer or legend', async type => {
       const fixture = await create([
         { x: 'positive overflow', y: 1e308 }, { x: 'positive overflow', y: 1e308 },
@@ -112,7 +112,7 @@ describe('SmartChartComponent numeric null compatibility', () => {
     }
   );
 
-  it.each(['bar', 'line', 'dot', 'pie'] as ChartType[])(
+  it.each(['bar', 'line', 'dot', 'pie'] as Exclude<ChartType, 'scatter'>[])(
     'shows the empty state when all %s aggregates overflow', async type => {
       const fixture = await create([{ x: 'valid', y: 10 }], type);
       const chart = fixture.componentInstance as any;

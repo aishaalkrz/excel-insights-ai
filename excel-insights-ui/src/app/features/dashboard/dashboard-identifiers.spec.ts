@@ -134,4 +134,33 @@ describe('Dashboard identifier-aware chart initialization', () => {
     expect(component.chartSuggestions).toEqual([]);
     expect(component.yAxisDropdown.selectedValue).toBe('Quantity');
   });
+
+  it('renders a FastAPI scatter suggestion with separate numeric points', async () => {
+    const data: BuilderSheet = {
+      ...sheet(['Price', 'Quantity']),
+      records: [{ Price: 0, Quantity: -1.5 }, { Price: 0, Quantity: 2.5 }],
+      chart_suggestions: [{
+        id: 'Sales_chart_1', title: 'Quantity حسب Price', type: 'scatter',
+        xKey: 'Price', yKey: 'Quantity', xScale: 'number', yScale: 'number',
+        xAxisLabel: 'Price', yAxisLabel: 'Quantity', showTooltip: true,
+        data: [{ Price: 0, Quantity: -1.5 }, { Price: 0, Quantity: 2.5 }],
+      }],
+    };
+    const { component, fixture } = await create(data);
+    expect(component.chartTypeDropdown.selectedValue).toBe('scatter');
+    expect(component.chartTypeDropdown.options.some(option => option.value === 'scatter')).toBe(true);
+    expect(component.xAxisDropdown.selectedValue).toBe('Price');
+    expect(component.yAxisDropdown.selectedValue).toBe('Quantity');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('.scatter-point').length).toBe(2);
+  });
+
+  it('allows manual scatter selection while retaining the Dot option', async () => {
+    const { component } = await create(sheet(['Price', 'Quantity']));
+    component.onYAxisChange('Quantity');
+    component.onChartTypeChange('scatter');
+    expect(component.chartSuggestions[0].type).toBe('scatter');
+    expect(component.chartSuggestions[0].xScale).toBe('number');
+    expect(component.chartTypeDropdown.options.some(option => option.value === 'dot')).toBe(true);
+  });
 });

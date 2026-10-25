@@ -102,6 +102,9 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
       case 'dot':
         this.renderDotChart(chartData, catKey, valKey);
         break;
+      case 'scatter':
+        this.renderScatterChart(chartData, catKey, valKey);
+        break;
     }
   }
 
@@ -118,9 +121,12 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
 
     const data = (this.config.data ?? []).filter(row =>
       row[catKey] != null && String(row[catKey]).trim() !== '' &&
-      (this.config.xScale !== 'number' || this.getValue(row, catKey) !== null) &&
+      ((this.config.type !== 'scatter' && this.config.xScale !== 'number') || this.getValue(row, catKey) !== null) &&
       this.getValue(row, valKey) !== null
     );
+
+    // Scatter uses individual records, even when repeated X values would overflow a sum.
+    if (this.config.type === 'scatter') return data;
 
     // Validate category totals before rendering, legend creation, and empty-state checks.
     const validCategories = new Set(
@@ -303,6 +309,60 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
       .on('mouseleave', () => this.hideTooltip())
       .transition().delay((_, i) => i * 40).duration(400)
       .attr('r', 7);
+  }
+
+  private renderScatterChart(data: Record<string, unknown>[], xKey: string, yKey: string): void {
+    const svg = this.createSvg();
+    const { innerWidth, innerHeight } = this.getInnerSize();
+    const chart = svg.append('g').attr('transform', `translate(${this.margin.left},${this.margin.top})`);
+    const createScale = (key: string, range: [number, number]) => {
+      const [min, max] = d3.extent(data, row => this.getValue(row, key)!) as [number, number];
+      const magnitude = Math.max(Math.abs(min), Math.abs(max));
+      // Keep ordinary domains unchanged. Normalize near numeric limits so domain
+      // subtraction, singleton padding, and D3 tick generation stay finite.
+      const factor = magnitude > Number.MAX_VALUE / 16 || (magnitude > 0 && magnitude < 1e-300)
+        ? magnitude : 1;
+      const low = min / factor;
+      const high = max / factor;
+      const padding = low === high ? Math.abs(low) * 0.05 || 1 : 0;
+      const scale = d3.scaleLinear().domain([low - padding, high + padding]).nice().range(range);
+      // A padded MAX_VALUE domain can extend beyond representable original
+      // values. Omit those ticks rather than multiplying them into Infinity.
+      const limit = Number.MAX_VALUE / factor;
+      const ticks = scale.ticks(6).filter(value => Math.abs(value) <= limit);
+      return {
+        scale, factor, ticks,
+        format: (value: d3.NumberValue) => d3.format('~g')(Number(value) * factor),
+      };
+    };
+    const x = createScale(xKey, [0, innerWidth]);
+    const y = createScale(yKey, [innerHeight, 0]);
+
+    this.drawGrid(chart, x.scale, y.scale, innerWidth, innerHeight);
+    chart.append('g').attr('class', 'axis axis-x')
+      .attr('transform', `translate(0,${innerHeight})`)
+      .call(d3.axisBottom(x.scale).tickValues(x.ticks).tickSizeOuter(0).tickFormat(x.format));
+    chart.append('g').attr('class', 'axis axis-y')
+      .call(d3.axisLeft(y.scale).tickValues(y.ticks).tickSizeOuter(0).tickFormat(y.format));
+    this.drawAxisLabels(svg);
+
+    chart.selectAll('.scatter-point')
+      .data(data)
+      .enter().append('circle')
+      .attr('class', 'scatter-dot scatter-point')
+      .attr('cx', row => x.scale(this.getValue(row, xKey)! / x.factor))
+      .attr('cy', row => y.scale(this.getValue(row, yKey)! / y.factor))
+      .attr('r', 6)
+      .attr('fill', row => this.colorScale(String(row[xKey])))
+      .attr('stroke', '#fff')
+      .attr('stroke-width', 2)
+      .on('mousemove', (event, row) => {
+        const color = this.colorScale(String(row[xKey]));
+        this.showTooltip(event,
+          this.formatTooltip(xKey, this.getValue(row, xKey), color) + '<br>' +
+          this.formatTooltip(yKey, this.getValue(row, yKey), color));
+      })
+      .on('mouseleave', () => this.hideTooltip());
   }
 
   private renderPieChart(data: any[], catKey: string, valKey: string): void {

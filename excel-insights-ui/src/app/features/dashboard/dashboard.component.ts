@@ -70,6 +70,7 @@ export class DashboardComponent implements OnInit {
       { label: 'أعمدة', value: 'bar', icon: '/charts/bar.svg' },
       { label: 'خط', value: 'line', icon: '/charts/line.svg' },
       { label: 'نقاط', value: 'dot', icon: '/charts/dot.svg' },
+      { label: 'تشتت', value: 'scatter', icon: '/charts/dot.svg' },
       { label: 'دائري', value: 'pie', icon: '/charts/pie.svg' },
     ],
   };
@@ -295,7 +296,9 @@ export class DashboardComponent implements OnInit {
         valueKey: yKey,
         xAxisLabel: xKey,
         yAxisLabel: yKey,
-        xScale: this.currentSheet.date_columns?.includes(xKey)
+        xScale: type === 'scatter'
+          ? 'number'
+          : this.currentSheet.date_columns?.includes(xKey)
           ? 'time'
           : this.currentSheet.numeric_columns?.includes(xKey)
             ? 'number'
