@@ -2,6 +2,7 @@ fastapi
 uvicorn
 pandas
 openpyxl
+xlrd
 python-dotenv
 openai
 python-multipart

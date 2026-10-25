@@ -6,9 +6,10 @@ def detect_column_types(df: pd.DataFrame):
 
     numeric_columns = df.select_dtypes(include="number").columns.tolist()
     text_columns = df.select_dtypes(include="object").columns.tolist()
-    date_columns = df.select_dtypes(
-        include=["datetime64[ns]", "datetime64[ns, UTC]"]
-    ).columns.tolist()
+    date_columns = [
+        col for col in columns
+        if pd.api.types.is_datetime64_any_dtype(df[col].dtype)
+    ]
 
     for col in text_columns.copy():
         converted = pd.to_datetime(df[col], errors="coerce")
