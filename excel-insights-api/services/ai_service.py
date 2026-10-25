@@ -1,4 +1,5 @@
 import json
+import math
 from core.config import client
 
 
@@ -15,13 +16,25 @@ def generate_ai_insights(
     summary_stats = active_sheet["summary_stats"]
     sample_data = active_sheet["sample_data"]
 
+    eligible_columns = {
+        column for column, stats in numeric_kpis.items()
+        if any(isinstance(value, (int, float)) and math.isfinite(value) for value in stats.values())
+    }
+    max_cards = min(4, len(eligible_columns))
+
     prompt = f"""
 You are an expert Data Analyst and Business Intelligence specialist.
 
 Generate a STRICT JSON response.
 
 RULES FOR KPI CARDS:
-- Select EXACTLY 4 critical KPIs from this dictionary: {numeric_kpis}.
+- Select between 0 and {max_cards} KPI cards, at most one per eligible measure column.
+- Eligible measure columns: {sorted(eligible_columns)}.
+- Use ONLY the supplied Numeric KPI Dictionary: {numeric_kpis}.
+- Identifier columns are not measures, even when they appear in columns or sample data.
+- Each card must specify column and statistic (sum, average, min, or max).
+- Copy the exact statistic value; never invent results or derive additional arithmetic.
+- Skip unavailable/null statistics. If no eligible measures exist, return kpi_cards: [].
 - Ensure each KPI focuses on a different aspect.
 - Do not duplicate the same column name or concept.
 - metricType must be one of:
@@ -53,7 +66,7 @@ Reference Data:
 JSON STRUCTURE:
 {{
   "kpi_cards": [
-    {{ "label": "...", "value": 0, "description": "...", "metricType": "..." }}
+    {{ "column": "...", "statistic": "sum", "label": "...", "value": 0, "description": "...", "metricType": "..." }}
   ],
   "smart_insights": {{
     "executive_summary": "...",
@@ -87,7 +100,29 @@ JSON STRUCTURE:
     ai_insights_text = response.choices[0].message.content
 
     try:
-        return json.loads(ai_insights_text)
+        result = json.loads(ai_insights_text)
+        cards = []
+        seen_columns = set()
+        for card in result.get("kpi_cards", []) or []:
+            if not isinstance(card, dict):
+                continue
+            column, statistic = card.get("column"), card.get("statistic")
+            if not isinstance(column, str) or column not in eligible_columns or column in seen_columns:
+                continue
+            if statistic not in ("sum", "average", "min", "max"):
+                continue
+            value = numeric_kpis[column].get(statistic)
+            if not isinstance(value, (int, float)) or not math.isfinite(value):
+                continue
+            # AI selects/explains the measure; numeric values always come from pandas.
+            public_card = {key: value for key, value in card.items() if key not in ("column", "statistic")}
+            public_card["value"] = value
+            cards.append(public_card)
+            seen_columns.add(column)
+            if len(cards) == max_cards:
+                break
+        result["kpi_cards"] = cards
+        return result
     except Exception:
         return {
             "raw_response": ai_insights_text

@@ -9,6 +9,7 @@ export interface AnalysisResult {
   field_metadata: {
     name: string;
     type: 'text' | 'number' | 'date';
+    is_identifier?: boolean;
   }[];
 
   numeric_columns: string[];

@@ -201,11 +201,22 @@ export class DashboardComponent implements OnInit {
   }
 
   private initializeChartBuilder(): void {
+    this.chartSuggestions = [];
+    this.chartTitle = '';
+    this.chartTypeDropdown = { ...this.chartTypeDropdown, selectedValue: 'bar' };
+    this.xAxisDropdown = { ...this.xAxisDropdown, options: [], selectedValue: '' };
+    this.yAxisDropdown = { ...this.yAxisDropdown, options: [], selectedValue: '' };
     if (!this.currentSheet) return;
 
     const suggestedChart = this.currentSheet.chart_suggestions?.[0];
 
     const numericCols = this.currentSheet.numeric_columns ?? [];
+    const identifierColumns = new Set(
+      (this.currentSheet.field_metadata ?? [])
+        .filter((field: AnalysisResult['field_metadata'][number]) => field.is_identifier === true)
+        .map((field: AnalysisResult['field_metadata'][number]) => field.name)
+    );
+    const measureCols = numericCols.filter((col: string) => !identifierColumns.has(col));
 
     const xCols = [
       ...(this.currentSheet.text_columns ?? []),
@@ -224,7 +235,7 @@ export class DashboardComponent implements OnInit {
             ? 'number'
             : 'text',
       })),
-      selectedValue: suggestedChart?.xKey ?? xCols[0] ?? '',
+      selectedValue: suggestedChart?.xKey ?? xCols.find((col: string) => !identifierColumns.has(col)) ?? '',
     };
 
     this.yAxisDropdown = {
@@ -234,7 +245,7 @@ export class DashboardComponent implements OnInit {
         value: col,
         dataType: 'number' as const,
       })),
-      selectedValue: suggestedChart?.yKey ?? numericCols[0] ?? '',
+      selectedValue: suggestedChart?.yKey ?? measureCols[0] ?? '',
     };
 
     if (suggestedChart) {
@@ -261,6 +272,7 @@ export class DashboardComponent implements OnInit {
   }
 
   private buildChartFromSelection(): void {
+    this.chartSuggestions = [];
     if (!this.currentSheet?.records?.length) return;
 
     const type = this.chartTypeDropdown.selectedValue as ChartType;

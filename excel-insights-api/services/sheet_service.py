@@ -1,3 +1,5 @@
+import re
+
 import pandas as pd
 
 from utils.json_values import finite_json_values
@@ -37,6 +39,29 @@ def detect_column_types(df: pd.DataFrame):
         })
 
     return columns, numeric_columns, text_columns, date_columns, field_metadata
+
+
+def detect_numeric_identifiers(df: pd.DataFrame, numeric_columns: list[str]):
+    identifiers = []
+    for col in numeric_columns:
+        name = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", str(col))
+        name = re.sub(r"[\u064b-\u065f\u0670\u0640]", "", name).casefold()
+        name = re.sub(r"[إأآ]", "ا", name)
+        name = re.sub(r"[\W_]+", "_", name).strip("_")
+        explicit_name = (
+            name in {"id", "identifier", "معرف", "المعرف"}
+            or name.endswith(("_id", "_identifier"))
+            or re.fullmatch(r"(?:رقم|معرف|المعرف)_(?:الطلب|العميل|المنتج|الفاتورة|المستخدم|الحساب|الموظف)", name)
+            or re.fullmatch(r"(?:order|customer|product|invoice|user|account|employee)_number", name)
+        )
+        if not explicit_name:
+            continue
+
+        # Names are required; uniqueness or sequential values alone never imply ID.
+        values = df[col].replace([float("inf"), float("-inf")], float("nan")).dropna()
+        if values.map(lambda value: value >= 0 and float(value).is_integer()).all():
+            identifiers.append(col)
+    return identifiers
 
 
 def prepare_records(df: pd.DataFrame, date_columns: list[str]):
@@ -155,18 +180,23 @@ def process_sheet(sheet_name: str, df: pd.DataFrame):
     current_df = df.copy()
 
     columns, numeric_columns, text_columns, date_columns, field_metadata = detect_column_types(current_df)
+    identifier_columns = detect_numeric_identifiers(current_df, numeric_columns)
+    measure_columns = [col for col in numeric_columns if col not in identifier_columns]
+    for field in field_metadata:
+        if field["name"] in identifier_columns:
+            field["is_identifier"] = True
 
     records = prepare_records(current_df, date_columns)
     sample_data = prepare_sample_data(current_df, date_columns)
 
-    numeric_kpis = generate_numeric_kpis(current_df, numeric_columns)
-    summary_stats = generate_summary_stats(current_df, numeric_columns)
+    numeric_kpis = generate_numeric_kpis(current_df, measure_columns)
+    summary_stats = generate_summary_stats(current_df, measure_columns)
     categorical_summary = generate_categorical_summary(current_df, text_columns)
 
     chart_suggestions = generate_chart_suggestions(
         records=records,
         text_columns=text_columns,
-        numeric_columns=numeric_columns,
+        numeric_columns=measure_columns,
         date_columns=date_columns,
         df=current_df,
         sheet_name=sheet_name
