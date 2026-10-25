@@ -1,3 +1,5 @@
+@use '../../../../styles/lib' as ds;
+
 /* =========================================
    Navbar
 ========================================= */
@@ -5,7 +7,7 @@
 :host {
   display: block;
   width: 100%;
-  background: #fff;
+  background: ds.color('surface');
 }
 
 .navbar {
@@ -16,7 +18,7 @@
   padding-top: 28px;
 
   display: grid;
-  grid-template-columns: 300px 1fr 300px;
+  grid-template-columns: minmax(180px, 1fr) auto minmax(180px, 1fr);
 
   align-items: start;
   direction: rtl;
@@ -55,14 +57,14 @@
         font-size: 42px;
         line-height: 1;
         font-weight: 800;
-        color: var(--primary);
+        color: ds.color('primary');
       }
 
       small {
         display: block;
         margin-top: 7px;
         font-size: 15px;
-        color: var(--text-secondary);
+        color: ds.color('text-secondary');
       }
     }
   }
@@ -76,7 +78,7 @@
 
     display: flex;
     align-items: center;
-    gap: 34px;
+    gap: clamp(16px, 2vw, 34px);
 
     margin: 12px 0 0;
     padding: 0;
@@ -84,7 +86,7 @@
     font-size: 18px;
     font-weight: 600;
 
-    color: var(--text-primary);
+    color: ds.color('secondary');
 
     li {
       position: relative;
@@ -99,7 +101,7 @@
 
       &:hover,
       &.active {
-        color: var(--primary);
+        color: ds.color('primary');
       }
 
       &.active::before {
@@ -110,7 +112,7 @@
 
         border-radius: 50%;
 
-        background: var(--primary);
+        background: ds.color('primary');
 
         position: absolute;
 
@@ -139,29 +141,17 @@
 
 .primary-btn,
 .outline-btn {
-  font-family: inherit;
-  font-weight: 800;
-
-  cursor: pointer;
-
-  height: 44px;
-  min-width: 125px;
-
-  border-radius: 6px;
-
-  font-size: 15px;
+  @include ds.button-secondary;
 }
 
 .primary-btn {
-  background: var(--primary);
-  border: 1px solid var(--primary);
-  color: #fff;
+  @include ds.button-primary;
 }
 
 .outline-btn {
-  background: #fff;
-  border: 1px solid var(--primary);
-  color: var(--primary);
+  background: ds.color('surface');
+  border: 1px solid ds.color('primary');
+  color: ds.color('primary');
 }
 
 /* =========================================
@@ -177,7 +167,7 @@
   border: none;
   border-radius: 20px;
 
-  background: var(--primary-light);
+  background: ds.color('primary-light');
 
   align-items: center;
   justify-content: center;
@@ -201,7 +191,7 @@
 
   z-index: 9999;
 
-  background: rgba(15, 25, 22, 0.22);
+  background: ds.tint('secondary', 22%);
   backdrop-filter: blur(4px);
 
   opacity: 0;
@@ -226,7 +216,7 @@
 
     height: 100vh;
 
-    background: #fff;
+    background: ds.color('surface');
 
     padding: 22px;
 
@@ -239,7 +229,7 @@
     transform: translateX(100%);
     transition: transform .35s ease;
 
-    box-shadow: -12px 0 40px rgba(0,0,0,.12);
+    box-shadow: -12px 0 40px ds.tint('secondary', 12%);
   }
 
   .mobile-menu-header {
@@ -281,7 +271,7 @@
 
     strong {
       display: block;
-      color: var(--primary);
+      color: ds.color('primary');
       font-size: 22px;
       font-weight: 800;
     }
@@ -289,7 +279,7 @@
     small {
       display: block;
       margin-top: 4px;
-      color: var(--text-secondary);
+      color: ds.color('text-secondary');
       font-size: 10px;
     }
   }
@@ -309,13 +299,13 @@
       font-size: 15px;
       font-weight: 700;
 
-      border-bottom: 1px solid #edf2f0;
+      border-bottom: 1px solid ds.color('border');
 
-      color: var(--text-primary);
+      color: ds.color('secondary');
 
       &::after {
         content: "‹";
-        color: var(--primary);
+        color: ds.color('primary');
         font-size: 18px;
       }
 
@@ -355,7 +345,7 @@
   position: relative;
 
   a.active {
-    color: var(--primary);
+    color: ds.color('primary');
     font-weight: 900;
 
     &::before {
@@ -363,7 +353,7 @@
       width: 6px;
       height: 24px;
       border-radius: 999px;
-      background: var(--primary);
+      background: ds.color('primary');
       position: absolute;
       right: -22px;
       top: 50%;

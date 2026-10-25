@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, PLATFORM_ID } from '@angular/core';
+import { Component, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 
@@ -29,6 +29,27 @@ type MetricType =
   | 'price'
   | 'generic';
 
+// KPI accents follow what a metric measures, so a card keeps its colour when
+// the set or order of cards changes: outcome totals are green, descriptive
+// statistics and unclassified metrics slate.
+const METRIC_TONES: Record<MetricType, 'primary' | 'secondary'> = {
+  revenue: 'primary',
+  profit: 'primary',
+  growth: 'primary',
+  quantity: 'primary',
+  count: 'primary',
+  average: 'secondary',
+  max: 'secondary',
+  min: 'secondary',
+  discount: 'secondary',
+  price: 'secondary',
+  generic: 'secondary',
+};
+
+// Fallback cards are typed `generic` (sum) or by statistic; the statistic
+// decides their tone so the total stands out from the descriptive values.
+type KpiStatistic = 'sum' | 'average' | 'max' | 'min';
+
 @Component({
   selector: 'app-dashboard',
   standalone: true,
@@ -57,9 +78,15 @@ export class DashboardComponent implements OnInit {
   chartSuggestions: ChartConfig[] = [];
   smartInsights: any = null;
   uploadedAgo = '';
+  // Text shown in the title input. While `isChartTitleCustom` is false it
+  // follows `autoChartTitle`; a manual edit keeps it until reset.
   chartTitle = '';
+  isChartTitleCustom = false;
+  private suggestedTitle: Pick<ChartConfig, 'type' | 'xKey' | 'yKey' | 'title'> | null = null;
 
   isTableModalOpen = false;
+  readonly isExportingChart = signal(false);
+  readonly isExportingPdf = signal(false);
 
   chartTypeDropdown: DropdownConfig<ChartType> = {
     label: 'نوع الرسم',
@@ -88,6 +115,7 @@ export class DashboardComponent implements OnInit {
   };
   sheetDropdown: DropdownConfig<string> = {
     label: 'الشيت الحالي',
+    hideLabel: true,
     selectedValue: '',
     grouped: false,
     showIcons: false,
@@ -100,8 +128,7 @@ export class DashboardComponent implements OnInit {
     description: string;
     metricType: MetricType;
     icon: string;
-    color: string;
-    background: string;
+    statistic?: KpiStatistic;
   }[] = [];
 
   ngOnInit(): void {
@@ -120,6 +147,11 @@ export class DashboardComponent implements OnInit {
     this.initializeSelectedSheet();
     this.buildBigNumbers();
     this.initializeChartBuilder();
+  }
+
+  kpiTone(kpi: { metricType: MetricType; statistic?: KpiStatistic }): 'primary' | 'secondary' {
+    if (kpi.statistic) return kpi.statistic === 'sum' ? 'primary' : 'secondary';
+    return METRIC_TONES[kpi.metricType] ?? 'secondary';
   }
 
   openTableModal(): void {
@@ -204,6 +236,8 @@ export class DashboardComponent implements OnInit {
   private initializeChartBuilder(): void {
     this.chartSuggestions = [];
     this.chartTitle = '';
+    this.isChartTitleCustom = false;
+    this.suggestedTitle = null;
     this.chartTypeDropdown = { ...this.chartTypeDropdown, selectedValue: 'bar' };
     this.xAxisDropdown = { ...this.xAxisDropdown, options: [], selectedValue: '' };
     this.yAxisDropdown = { ...this.yAxisDropdown, options: [], selectedValue: '' };
@@ -230,11 +264,17 @@ export class DashboardComponent implements OnInit {
     };
 
     if (suggestedChart) {
-      this.chartTitle = suggestedChart.title;
+      this.suggestedTitle = suggestedChart.title?.trim() ? suggestedChart : null;
+      this.chartTypeDropdown = {
+        ...this.chartTypeDropdown,
+        selectedValue: suggestedChart.type,
+      };
+      this.syncAutoChartTitle();
 
       this.chartSuggestions = [
         {
           ...suggestedChart,
+          title: this.effectiveChartTitle,
           showLegend: true,
           data: this.currentSheet.records || [],
           isSampled: false,
@@ -242,16 +282,47 @@ export class DashboardComponent implements OnInit {
         },
       ];
 
-      this.chartTypeDropdown = {
-        ...this.chartTypeDropdown,
-        selectedValue: suggestedChart.type,
-      };
-
       return;
     }
 
-    this.chartTitle = '';
     this.buildChartFromSelection();
+  }
+
+  /**
+   * Title derived from the current chart type and X/Y selection. The backend
+   * suggestion's own title is used only while its exact type and axes remain.
+   */
+  get autoChartTitle(): string {
+    const type = this.chartTypeDropdown.selectedValue;
+    const xKey = this.xAxisDropdown.selectedValue;
+    const yKey = this.yAxisDropdown.selectedValue;
+    if (!xKey || !yKey) return '';
+
+    const suggestion = this.suggestedTitle;
+    if (suggestion && suggestion.type === type && suggestion.xKey === xKey && suggestion.yKey === yKey) {
+      return suggestion.title;
+    }
+
+    switch (type) {
+      case 'pie': return `توزيع ${yKey} حسب ${xKey}`;
+      case 'scatter': return `${yKey} مقابل ${xKey}`;
+      default: return `${yKey} حسب ${xKey}`;
+    }
+  }
+
+  /** The title used by the preview heading, the chart config, and exports. */
+  get effectiveChartTitle(): string {
+    return this.isChartTitleCustom ? this.chartTitle.trim() : this.autoChartTitle;
+  }
+
+  private syncAutoChartTitle(): void {
+    if (!this.isChartTitleCustom) this.chartTitle = this.autoChartTitle;
+  }
+
+  private applyChartTitle(): void {
+    const chart = this.chartSuggestions[0];
+    const title = this.effectiveChartTitle;
+    if (chart && chart.title !== title) this.chartSuggestions = [{ ...chart, title }];
   }
 
   private getAxisColumns() {
@@ -322,6 +393,7 @@ export class DashboardComponent implements OnInit {
 
   private buildChartFromSelection(): void {
     this.chartSuggestions = [];
+    this.syncAutoChartTitle();
     if (!this.currentSheet?.records?.length) return;
 
     const type = this.chartTypeDropdown.selectedValue as ChartType;
@@ -340,7 +412,7 @@ export class DashboardComponent implements OnInit {
       {
         id: `custom_${this.selectedSheetName}`,
         sheetName: this.selectedSheetName,
-        title: this.chartTitle || `${yKey} حسب ${xKey}`,
+        title: this.effectiveChartTitle,
         type,
         xKey,
         yKey,
@@ -400,18 +472,23 @@ export class DashboardComponent implements OnInit {
     this.buildChartFromSelection();
   }
 
+  // An empty input (or one matching the automatic title) returns to automatic
+  // mode; the input is refilled when it loses focus so typing is not disrupted.
   onChartTitleChange(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
     this.chartTitle = value;
+    this.isChartTitleCustom = value.trim() !== '' && value.trim() !== this.autoChartTitle;
+    this.applyChartTitle();
+  }
 
-    if (!this.chartSuggestions[0]) return;
+  onChartTitleBlur(): void {
+    this.syncAutoChartTitle();
+  }
 
-    this.chartSuggestions = [
-      {
-        ...this.chartSuggestions[0],
-        title: value,
-      },
-    ];
+  resetChartTitle(): void {
+    this.isChartTitleCustom = false;
+    this.syncAutoChartTitle();
+    this.applyChartTitle();
   }
 
   private updateSheetDropdown(): void {
@@ -446,8 +523,6 @@ export class DashboardComponent implements OnInit {
             description: card.description,
             metricType,
             icon: this.resolveMetricIcon(metricType),
-            color: this.resolveMetricColor(metricType),
-            background: this.resolveMetricBackground(metricType),
           };
         });
 
@@ -465,10 +540,10 @@ export class DashboardComponent implements OnInit {
 
       this.bigNumbers = entries
         .flatMap(([column, kpi]: [string, any]) => [
-          this.createKpiCard(`إجمالي ${column}`, kpi.sum, 'مجموع القيم', 'generic'),
-          this.createKpiCard(`متوسط ${column}`, kpi.average, 'متوسط القيم', 'average'),
-          this.createKpiCard(`أعلى ${column}`, kpi.max, 'أعلى قيمة', 'max'),
-          this.createKpiCard(`أقل ${column}`, kpi.min, 'أقل قيمة', 'min'),
+          this.createKpiCard(`إجمالي ${column}`, kpi.sum, 'مجموع القيم', 'generic', 'sum'),
+          this.createKpiCard(`متوسط ${column}`, kpi.average, 'متوسط القيم', 'average', 'average'),
+          this.createKpiCard(`أعلى ${column}`, kpi.max, 'أعلى قيمة', 'max', 'max'),
+          this.createKpiCard(`أقل ${column}`, kpi.min, 'أقل قيمة', 'min', 'min'),
         ])
         .slice(0, 4);
     } catch (error) {
@@ -480,7 +555,8 @@ export class DashboardComponent implements OnInit {
     label: string,
     value: string | number | null,
     description: string,
-    metricType: MetricType
+    metricType: MetricType,
+    statistic?: KpiStatistic
   ) {
     return {
       label,
@@ -488,8 +564,7 @@ export class DashboardComponent implements OnInit {
       description,
       metricType,
       icon: this.resolveMetricIcon(metricType),
-      color: this.resolveMetricColor(metricType),
-      background: this.resolveMetricBackground(metricType),
+      statistic,
     };
   }
 
@@ -513,38 +588,6 @@ export class DashboardComponent implements OnInit {
       : 'generic';
   }
 
-  private resolveMetricColor(metricType?: string): string {
-    switch (this.normalizeMetricType(metricType)) {
-      case 'revenue': return '#3E7B6B';
-      case 'quantity': return '#5B9F77';
-      case 'average': return '#8B7FD6';
-      case 'max': return '#D9A441';
-      case 'min': return '#D884B6';
-      case 'discount': return '#E07A7A';
-      case 'count': return '#6A9FD8';
-      case 'growth': return '#63B7B0';
-      case 'profit': return '#4C9B6B';
-      case 'price': return '#5B8FB9';
-      default: return '#94A3B8';
-    }
-  }
-
-  private resolveMetricBackground(metricType?: string): string {
-    switch (this.normalizeMetricType(metricType)) {
-      case 'revenue': return '#E8F5F0';
-      case 'quantity': return '#EEF9F1';
-      case 'average': return '#F4F0FD';
-      case 'max': return '#FFF7E8';
-      case 'min': return '#FFF0F8';
-      case 'discount': return '#FFF1F1';
-      case 'count': return '#EEF5FD';
-      case 'growth': return '#EDF9F8';
-      case 'profit': return '#EDF8F1';
-      case 'price': return '#EEF5FB';
-      default: return '#F8FAFC';
-    }
-  }
-
   private resolveMetricIcon(metricType?: string): string {
     switch (metricType) {
       case 'revenue': return '/icons/revenue.svg';
@@ -560,7 +603,18 @@ export class DashboardComponent implements OnInit {
     }
   }
 
+  // `is-exporting` expands the legend and data notice so the image is complete;
+  // interactive toggles are marked `export-exclude` and left out of the image.
+  private readonly exportFilter = (node: HTMLElement) =>
+    !(node.classList?.contains('export-exclude'));
+
+  // Read from the design tokens so the PDF matches the page background.
+  private pageBackground(): string {
+    return getComputedStyle(document.documentElement).getPropertyValue('--background').trim() || '#FFFFFF';
+  }
+
   exportChart(): void {
+    if (this.isExportingChart()) return;
     const chartElement = document.querySelector('.chart-preview-card');
 
     if (!(chartElement instanceof HTMLElement)) {
@@ -568,40 +622,57 @@ export class DashboardComponent implements OnInit {
       return;
     }
 
-    const width = chartElement.offsetWidth;
-    const height = chartElement.offsetHeight;
+    this.isExportingChart.set(true);
+    chartElement.classList.add('is-exporting');
 
-    htmlToImage.toPng(chartElement, {
-      width,
-      height,
-      style: {
-        backgroundColor: '#fff'
-      },
-      pixelRatio: 2
-    })
-    .then((dataUrl) => {
-      saveAs(dataUrl, 'basira-chart.png');
+    requestAnimationFrame(() => {
+      const width = chartElement.offsetWidth;
+      const height = chartElement.offsetHeight;
 
-      this.toast.success('تم تصدير الرسم بنجاح');
-    })
-    .catch((error) => {
-      console.error('Error exporting chart:', error);
+      htmlToImage.toPng(chartElement, {
+        width,
+        height,
+        style: {
+          backgroundColor: '#fff'
+        },
+        pixelRatio: 2,
+        filter: this.exportFilter,
+      })
+      .then((dataUrl) => {
+        saveAs(dataUrl, 'basira-chart.png');
 
-      this.toast.error('فشل تصدير الرسم');
+        this.toast.success('تم تصدير الرسم بنجاح');
+      })
+      .catch((error) => {
+        console.error('Error exporting chart:', error);
+
+        this.toast.error('فشل تصدير الرسم');
+      })
+      .finally(() => {
+        chartElement.classList.remove('is-exporting');
+        this.isExportingChart.set(false);
+      });
     });
   }
   exportDashboardPdf() {
+    if (this.isExportingPdf()) return;
     const dashboardElement = document.getElementById('dashboard-export');
 
     if (!(dashboardElement instanceof HTMLElement)) return;
 
-    dashboardElement.classList.add('pdf-mode');
+    this.isExportingPdf.set(true);
+    dashboardElement.classList.add('pdf-mode', 'is-exporting');
+    const finish = () => {
+      dashboardElement.classList.remove('pdf-mode', 'is-exporting');
+      this.isExportingPdf.set(false);
+    };
 
     setTimeout(() => {
       htmlToImage.toPng(dashboardElement, {
-        backgroundColor: '#F7FAF9',
+        backgroundColor: this.pageBackground(),
         pixelRatio: 2,
-        cacheBust: true
+        cacheBust: true,
+        filter: this.exportFilter,
       })
       .then((dataUrl) => {
         const pdf = new jsPDF('p', 'mm', 'a4');
@@ -632,11 +703,15 @@ export class DashboardComponent implements OnInit {
           pdf.save('basira-report.pdf');
           this.toast.success('تم تصدير التقرير بنجاح');
 
-          dashboardElement.classList.remove('pdf-mode');
+          finish();
+        };
+        img.onerror = () => {
+          finish();
+          this.toast.error('فشل تصدير التقرير');
         };
       })
       .catch((error) => {
-        dashboardElement.classList.remove('pdf-mode');
+        finish();
         console.error('Error exporting dashboard PDF:', error);
         this.toast.error('فشل تصدير التقرير');
       });

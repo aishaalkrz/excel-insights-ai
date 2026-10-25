@@ -1,0 +1,127 @@
+@use 'tokens' as t;
+@use 'typography' as type;
+
+// Solid ring: readable on white and light surfaces. Use `$color` for dark ones.
+@mixin focus-ring($offset: 2px, $color: t.color('focus-ring')) {
+  outline: 2px solid $color;
+  outline-offset: $offset;
+}
+
+@mixin focus-visible {
+  &:focus-visible {
+    @include focus-ring;
+  }
+}
+
+@mixin button-base($height: 'control-md') {
+  height: t.size($height);
+  min-width: 0;
+  padding: 0 t.space(4);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: t.space(2);
+  border: 1px solid transparent;
+  border-radius: t.radius('md');
+  font-family: inherit;
+  @include type.text('sm', 'heavy', 'tight');
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color t.transition('base'), border-color t.transition('base'),
+    color t.transition('base'), box-shadow t.transition('base');
+  @include focus-visible;
+
+  img {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+@mixin button-primary($height: 'control-md') {
+  @include button-base($height);
+  background: t.color('primary');
+  color: t.color('text-on-primary');
+
+  // Monochrome SVG icons are recoloured to match the label.
+  img {
+    filter: brightness(0) invert(1);
+  }
+
+  &:hover:not(:disabled) {
+    background: t.color('primary-dark');
+  }
+}
+
+@mixin button-secondary($height: 'control-md') {
+  @include button-base($height);
+  border-color: t.color('border-strong');
+  background: t.color('surface');
+  color: t.color('secondary');
+
+  &:hover:not(:disabled) {
+    border-color: t.color('secondary');
+    background: t.color('secondary-light');
+  }
+}
+
+@mixin button-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: t.color('primary');
+  font-family: inherit;
+  @include type.text('xs', 'bold', 'tight');
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  border-radius: t.radius('sm');
+  @include focus-visible;
+
+  &:hover {
+    color: t.color('primary-dark');
+  }
+}
+
+@mixin input-control($height: 'control-md') {
+  width: 100%;
+  min-width: 0;
+  height: t.size($height);
+  padding: 0 t.space(3);
+  border: 1px solid t.color('border-strong');
+  border-radius: t.radius('md');
+  background: t.color('surface');
+  color: t.color('text-primary');
+  font-family: inherit;
+  @include type.text('md', 'bold', 'tight');
+  transition: border-color t.transition('base'), box-shadow t.transition('base');
+
+  &::placeholder {
+    color: t.color('text-muted');
+    font-weight: t.font-weight('semibold');
+  }
+
+  &:hover {
+    border-color: t.color('text-muted');
+  }
+
+  &:focus {
+    outline: none;
+  }
+
+  &:focus-visible {
+    @include field-focus;
+  }
+}
+
+// Border change carries the contrast; the halo only softens it.
+@mixin field-focus {
+  outline: none;
+  border-color: t.color('focus-ring');
+  box-shadow: 0 0 0 3px t.color('focus-halo');
+}

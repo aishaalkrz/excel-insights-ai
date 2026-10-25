@@ -135,7 +135,7 @@
 
       <input #fileInput type="file" hidden accept=".xlsx,.xls,.csv" (change)="onFileSelected($event)" />
 
-      <div class="hero-actions">
+      <div class="hero-actions" role="group" aria-label="رفع الملف وتحليله" [attr.aria-busy]="loading">
 
         <button
           class="upload-btn"
@@ -146,10 +146,8 @@
         >
           {{ selectedFileName || 'رفع ملف Excel أو CSV' }}
 
-          <img
-            [src]="selectedFile ? '/icons/tick-circle.svg' : '/icons/upload.svg'"
-            alt=""
-          />
+          <span class="icon-glyph" aria-hidden="true"
+            [style.--icon]="selectedFile ? 'url(/icons/tick-circle.svg)' : 'url(/icons/upload.svg)'"></span>
         </button>
 
       @if (selectedFile) {
@@ -171,14 +169,14 @@
       </div>
 
       @if (loading) {
-        <p class="loading-hint">
+        <p class="loading-hint" role="status">
           يتم الآن قراءة الملف وتحليل البيانات، قد يستغرق ذلك بضع ثوانٍ...
         </p>
       }
 
 
       @if (errorMessage) {
-      <p class="error-message">
+      <p class="error-message" role="alert">
         {{ errorMessage }}
       </p>
       }
@@ -196,7 +194,7 @@
         <h3>تحليل ذكي</h3>
 
         <div class="feature-icon">
-          <img src="/icons/1.svg" alt="" />
+          <span class="icon-glyph" style="--icon: url(/icons/1.svg)" aria-hidden="true"></span>
         </div>
       </div>
 
@@ -212,7 +210,7 @@
         <h3>رسوم بيانية تفاعلية</h3>
 
         <div class="feature-icon">
-          <img src="/icons/2.svg" alt="" />
+          <span class="icon-glyph" style="--icon: url(/icons/2.svg)" aria-hidden="true"></span>
         </div>
       </div>
 
@@ -229,7 +227,7 @@
         <h3>نتائج فورية</h3>
 
         <div class="feature-icon">
-          <img src="/icons/3.svg" alt="" />
+          <span class="icon-glyph" style="--icon: url(/icons/3.svg)" aria-hidden="true"></span>
         </div>
       </div>
 
@@ -245,7 +243,7 @@
         <h3>تصدير النتائج</h3>
 
         <div class="feature-icon">
-          <img src="/icons/4.svg" alt="" />
+          <span class="icon-glyph" style="--icon: url(/icons/4.svg)" aria-hidden="true"></span>
         </div>
       </div>
 

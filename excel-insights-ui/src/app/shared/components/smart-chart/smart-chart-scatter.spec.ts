@@ -16,19 +16,29 @@ describe('SmartChartComponent true scatter support', () => {
     return fixture;
   }
 
+  // Margins grow to fit tick labels, so coordinates are asserted relative to
+  // the rendered plot area rather than a fixed pixel frame.
+  function plot(fixture: Awaited<ReturnType<typeof create>>) {
+    const { innerWidth, innerHeight } = (fixture.componentInstance as any).layout;
+    return { w: innerWidth as number, h: innerHeight as number };
+  }
+
   it('uses linear numeric coordinates for negative, zero, and decimal values', async () => {
     const fixture = await create([{ x: -2, y: -1 }, { x: 0, y: 0 }, { x: 0.5, y: 3 }, { x: 2, y: 5 }]);
     const points = fixture.nativeElement.querySelectorAll('.scatter-point');
     expect(points.length).toBe(4);
-    const expectedX = [0, 335, 418.75, 670];
-    const expectedY = [296, 296 * 5 / 6, 296 * 2 / 6, 0];
+    const { w, h } = plot(fixture);
+    const expectedX = [0, w / 2, w * 0.625, w];
+    const expectedY = [h, h * 5 / 6, h * 2 / 6, 0];
     points.forEach((point: Element, i: number) => {
       expect(Number(point.getAttribute('cx'))).toBeCloseTo(expectedX[i]);
       expect(Number(point.getAttribute('cy'))).toBeCloseTo(expectedY[i]);
     });
     expect(fixture.nativeElement.querySelector('.x-label').textContent).toBe('Numeric X');
     expect(fixture.nativeElement.querySelector('.y-label').textContent).toBe('Numeric Y');
-    expect(fixture.nativeElement.querySelector('svg').getAttribute('viewBox')).toBe('0 0 760 450');
+    const { width, height } = (fixture.componentInstance as any).layout;
+    expect(fixture.nativeElement.querySelector('svg').getAttribute('viewBox')).toBe(`0 0 ${width} ${height}`);
+    expect(Number(fixture.nativeElement.querySelector('.x-label').getAttribute('y'))).toBeLessThan(height);
   });
 
   it('preserves duplicate X records as separate points', async () => {
@@ -78,8 +88,9 @@ describe('SmartChartComponent true scatter support', () => {
     'renders finite centered coordinates for singleton domains ($x, $y)', async row => {
       const fixture = await create([row]);
       const point = fixture.nativeElement.querySelector('.scatter-point');
-      expect(Number(point.getAttribute('cx'))).toBeCloseTo(335);
-      expect(Number(point.getAttribute('cy'))).toBeCloseTo(148);
+      const { w, h } = plot(fixture);
+      expect(Number(point.getAttribute('cx'))).toBeCloseTo(w / 2);
+      expect(Number(point.getAttribute('cy'))).toBeCloseTo(h / 2);
     }
   );
 
@@ -127,11 +138,12 @@ describe('SmartChartComponent true scatter support', () => {
       ]);
       const points = fixture.nativeElement.querySelectorAll('.scatter-point');
       expect(points.length).toBe(4);
+      const { w, h } = plot(fixture);
       expect(Number(points[0].getAttribute('cx'))).toBeCloseTo(0);
-      expect(Number(points[1].getAttribute('cx'))).toBeCloseTo(335);
-      expect(Number(points[2].getAttribute('cx'))).toBeCloseTo(670);
-      expect(Number(points[0].getAttribute('cy'))).toBeCloseTo(296);
-      expect(Number(points[1].getAttribute('cy'))).toBeCloseTo(148);
+      expect(Number(points[1].getAttribute('cx'))).toBeCloseTo(w / 2);
+      expect(Number(points[2].getAttribute('cx'))).toBeCloseTo(w);
+      expect(Number(points[0].getAttribute('cy'))).toBeCloseTo(h);
+      expect(Number(points[1].getAttribute('cy'))).toBeCloseTo(h / 2);
       expect(Number(points[2].getAttribute('cy'))).toBeCloseTo(0);
       expect(points[2].getAttribute('cx')).toBe(points[3].getAttribute('cx'));
       expectFiniteSvg(fixture.nativeElement);
@@ -148,8 +160,9 @@ describe('SmartChartComponent true scatter support', () => {
       const fixture = await create([{ x: value, y: value }, { x: value, y: value }]);
       const points = fixture.nativeElement.querySelectorAll('.scatter-point');
       expect(points.length).toBe(2);
-      expect(Number(points[0].getAttribute('cx'))).toBeCloseTo(335);
-      expect(Number(points[0].getAttribute('cy'))).toBeCloseTo(148);
+      const { w, h } = plot(fixture);
+      expect(Number(points[0].getAttribute('cx'))).toBeCloseTo(w / 2);
+      expect(Number(points[0].getAttribute('cy'))).toBeCloseTo(h / 2);
       expectFiniteSvg(fixture.nativeElement);
       const ticks = [...fixture.nativeElement.querySelectorAll('.axis-x .tick text')]
         .map((el: any) => Number(el.textContent.replace('−', '-')));

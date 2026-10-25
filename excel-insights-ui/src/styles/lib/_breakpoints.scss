@@ -1,0 +1,35 @@
+@use 'sass:map';
+
+// sm: phones · md: portrait tablets · lg: landscape tablets · xl: desktop.
+$breakpoints: (
+  'sm': 480px,
+  'md': 768px,
+  'lg': 960px,
+  'xl': 1200px,
+);
+
+@function breakpoint($key) {
+  @if not map.has-key($breakpoints, $key) {
+    @error 'Unknown breakpoint `#{$key}`.';
+  }
+  @return map.get($breakpoints, $key);
+}
+
+// Below the breakpoint (exclusive), e.g. `down(md)` matches widths < 768px.
+@mixin down($key) {
+  @media (max-width: #{breakpoint($key) - 0.02px}) {
+    @content;
+  }
+}
+
+@mixin up($key) {
+  @media (min-width: breakpoint($key)) {
+    @content;
+  }
+}
+
+@mixin reduced-motion {
+  @media (prefers-reduced-motion: reduce) {
+    @content;
+  }
+}

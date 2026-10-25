@@ -1,51 +1,65 @@
-<div class="dropdown-field" #dropdownRef>
+<div class="dropdown-field" #dropdownRef (keydown.escape)="close(true)">
   @if (!config().hideLabel) {
-  <label>{{ config().label }}</label>
+  <label [id]="labelId" (click)="trigger.focus()">{{ config().label }}</label>
   }
 
-  <div class="custom-select" [class.disabled]="config().disabled" (click)="toggleDropdown()">
+  <button
+    #trigger
+    type="button"
+    class="custom-select"
+    aria-haspopup="listbox"
+    [class.open]="isOpen()"
+    [class.disabled]="config().disabled"
+    [disabled]="config().disabled"
+    [attr.aria-expanded]="isOpen()"
+    [attr.aria-controls]="isOpen() ? listboxId : null"
+    [attr.aria-labelledby]="config().hideLabel ? null : labelId + ' ' + valueId"
+    [attr.aria-label]="config().hideLabel ? config().label + ': ' + selectedLabel() : null"
+    [title]="selectedLabel()"
+    (click)="toggleDropdown()"
+  >
 
-    <div class="selected-content">
+    <span class="selected-content">
       @if (config().showIcons && selectedOption()?.icon) {
       <span class="option-icon">
         <img [src]="selectedOption()?.icon" alt="" />
       </span>
       }
-      <span class="selected-label">{{ selectedLabel() }}</span>
-    </div>
+      <span class="selected-label" dir="auto" [id]="valueId">{{ selectedLabel() }}</span>
+    </span>
 
-    <i class="chevron" [class.open]="isOpen()"></i>
-  </div>
+    <i class="chevron" [class.open]="isOpen()" aria-hidden="true"></i>
+  </button>
 
   @if (isOpen()) {
-  <div class="dropdown-menu" [class.open-top]="config().placement === 'top'" role="listbox">
+  <div class="dropdown-menu" [class.open-top]="config().placement === 'top'">
 
     <div class="search-box" (click)="$event.stopPropagation()">
       <div class="search-input-wrapper">
         <div class="search-icon-wrap">
           @if (searchQuery()) {
-          <button class="clear-btn" (click)="searchQuery.set(''); $event.stopPropagation()">
+          <button type="button" class="clear-btn" aria-label="مسح البحث" (click)="searchQuery.set(''); $event.stopPropagation()">
             <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="none" viewBox="0 0 24 24">
-              <path stroke="#3E7B6B" stroke-width="2.5" stroke-linecap="round" d="M18 6 6 18M6 6l12 12" />
+              <path stroke="currentColor" stroke-width="2.5" stroke-linecap="round" d="M18 6 6 18M6 6l12 12" />
             </svg>
           </button>
           } @else {
           <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none"
-            viewBox="0 0 24 24">
-            <circle cx="11" cy="11" r="8" stroke="#3E7B6B" stroke-width="2" />
-            <path stroke="#3E7B6B" stroke-width="2" stroke-linecap="round" d="m21 21-4.35-4.35" />
+            viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2" />
+            <path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="m21 21-4.35-4.35" />
           </svg>
           }
         </div>
 
-        <input #searchInput type="text" placeholder="بحث..." [value]="searchQuery()"
+        <input #searchInput type="text" placeholder="بحث..." aria-label="بحث في الخيارات" [value]="searchQuery()"
           (input)="searchQuery.set($any($event.target).value)" (click)="$event.stopPropagation()" />
       </div>
     </div>
 
-    <div class="menu-list">
+    <div class="menu-list" role="listbox" [id]="listboxId" [attr.aria-label]="config().label">
       @for (group of filteredGroups(); track group.type) {
-      <div class="option-group">
+      <div class="option-group" role="presentation">
 
         @if (config().grouped && group.label) {
         <span class="group-label">
@@ -57,20 +71,24 @@
         }
 
         @for (option of group.options; track option.value) {
-        <div class="dropdown-option" role="option" [class.selected]="option.value === config().selectedValue"
-          (click)="selectOption(option)">
+        <div class="dropdown-option" role="option" tabindex="0" [title]="option.label"
+          [class.selected]="option.value === config().selectedValue"
+          [attr.aria-selected]="option.value === config().selectedValue"
+          (click)="selectOption(option)"
+          (keydown.enter)="selectOption(option); $event.preventDefault()"
+          (keydown.space)="selectOption(option); $event.preventDefault()">
           <div class="option-content">
             @if (config().showIcons && option.icon) {
             <span class="option-icon">
               <img [src]="option.icon" alt="" />
             </span>
             }
-            <span class="option-label">{{ option.label }}</span>
+            <span class="option-label" dir="auto">{{ option.label }}</span>
           </div>
 
           @if (option.value === config().selectedValue) {
           <span class="check-icon">
-            <img src="/icons/check-true.svg" alt="Selected" />
+            <img src="/icons/check-true.svg" alt="" />
           </span>
           }
         </div>

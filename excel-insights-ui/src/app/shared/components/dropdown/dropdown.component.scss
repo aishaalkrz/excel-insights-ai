@@ -1,46 +1,48 @@
+@use '../../../../styles/lib' as ds;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
 .dropdown-field {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
   position: relative;
-  overflow: visible;
+  min-width: 0;
+  @include ds.stack(2);
 
   label {
-    color: var(--primary);
-    font-size: 13px;
-    font-weight: 800;
+    @include ds.label;
   }
 
   .custom-select {
+    position: relative;
     width: 100%;
-    min-width: 170px;
-    height: 42px;
-    padding: 0 16px 0 42px;
-    border: 1px solid rgba(62, 123, 107, 0.15);
-    border-radius: 10px;
-    background-color: #fff;
-    color: var(--text-primary);
-    font-size: 14px;
-    font-weight: 700;
-    font-family: inherit;
-    cursor: pointer;
+    min-width: 0;
+    height: ds.size('control-md');
+    padding-block: 0;
+    padding-inline: ds.space(3) ds.space(10);
     display: flex;
     align-items: center;
-    position: relative;
-    box-shadow: 0 4px 14px rgba(62, 123, 107, 0.06);
-    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+    border: 1px solid ds.color('border-strong');
+    border-radius: ds.radius('md');
+    background-color: ds.color('text-on-primary');
+    color: ds.color('text-primary');
+    font-family: inherit;
+    @include ds.text('md', 'bold', 'tight');
+    text-align: start;
+    cursor: pointer;
     user-select: none;
+    transition: border-color ds.transition('base'), box-shadow ds.transition('base');
 
     .chevron {
       position: absolute;
-      left: 14px;
-      right: auto;
+      inset-inline-end: ds.space(3);
       width: 16px;
       height: 16px;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' viewBox='0 0 24 24'%3E%3Cpath stroke='%233E7B6B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: center;
-      transition: transform 0.25s ease;
+      // The SVG is only the shape; its colour comes from the token.
+      --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' viewBox='0 0 24 24'%3E%3Cpath stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+      @include ds.mask-icon(ds.color('primary'));
+      transition: transform ds.transition('base');
 
       &.open {
         transform: rotate(180deg);
@@ -48,22 +50,18 @@
     }
 
     &:hover {
-      border-color: rgba(62, 123, 107, 0.35);
-      box-shadow: 0 10px 22px rgba(62, 123, 107, 0.12);
+      border-color: ds.color('text-muted');
     }
 
+    &:focus-visible,
     &.open {
-      border-color: var(--primary);
-      box-shadow:
-        0 0 0 4px rgba(76, 167, 133, 0.12),
-        0 12px 26px rgba(62, 123, 107, 0.14);
+      @include ds.field-focus;
     }
 
     &.disabled {
       opacity: 0.6;
       cursor: not-allowed;
-      background-color: #f7fbf8;
-      pointer-events: none;
+      background-color: ds.color('surface-muted');
     }
   }
 
@@ -71,45 +69,45 @@
   .option-content {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: ds.space(2);
     flex: 1;
+    min-width: 0;
     overflow: hidden;
 
     .option-icon {
-      width: 30px;
-      height: 30px;
+      width: 28px;
+      height: 28px;
       flex-shrink: 0;
       display: flex;
       align-items: center;
       justify-content: center;
 
-    img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      display: block;
-    }
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        display: block;
+      }
     }
 
     .selected-label,
     .option-label {
       flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      @include ds.truncate-auto;
     }
   }
 
   .dropdown-menu {
     position: absolute;
     top: calc(100% + 6px);
-    right: 0;
-    min-width: max(100%, 210px);
-    background: #fff;
-    border: 1px solid rgba(62, 123, 107, 0.15);
-    border-radius: 14px;
-    box-shadow: 0 12px 32px rgba(62, 123, 107, 0.14);
-    z-index: 99999;
+    inset-inline-start: 0;
+    width: 100%;
+    min-width: min(210px, calc(100vw - 32px));
+    background: ds.color('surface');
+    border: 1px solid ds.color('border');
+    border-radius: ds.radius('md');
+    box-shadow: ds.shadow('popover');
+    z-index: ds.z('popover');
     overflow: hidden;
     animation: dropdownOpen 0.2s ease;
 
@@ -119,8 +117,8 @@
     }
 
     .search-box {
-      padding: 10px;
-      border-bottom: 1px solid rgba(62, 123, 107, 0.12);
+      padding: ds.space(2);
+      border-bottom: 1px solid ds.color('border');
 
       .search-input-wrapper {
         position: relative;
@@ -129,77 +127,64 @@
 
         .search-icon-wrap {
           position: absolute;
-          left: 10px;
+          inset-inline-end: 10px;
           display: flex;
           align-items: center;
           justify-content: center;
           z-index: 1;
+          color: ds.color('primary');
 
           .search-icon {
-            opacity: 0.45;
+            opacity: 0.55;
             display: block;
           }
 
           .clear-btn {
-            width: 16px;
-            height: 16px;
+            width: 18px;
+            height: 18px;
             border: none;
-            background: rgba(62, 123, 107, 0.08);
+            background: ds.color('primary-light');
             border-radius: 50%;
             cursor: pointer;
             padding: 0;
             display: flex;
             align-items: center;
             justify-content: center;
-
-            &:hover {
-              background: rgba(62, 123, 107, 0.15);
-            }
+            @include ds.focus-visible;
           }
         }
 
         input {
           width: 100%;
-          border: 1px solid rgba(62, 123, 107, 0.18);
-          border-radius: 6px;
+          height: ds.size('control-sm');
+          border: 1px solid ds.color('border-strong');
+          border-radius: ds.radius('sm');
           outline: none;
-          padding: 5px 10px 5px 36px;
-          font-size: 13px;
+          padding-block: 0;
+          padding-inline: 10px 36px;
           font-family: inherit;
-          color: var(--text-primary);
-          background: #f7fbf8;
-          direction: rtl;
+          @include ds.text('sm', 'semibold', 'tight');
+          color: ds.color('text-primary');
+          background: ds.color('surface-muted');
 
           &::placeholder {
-            color: rgba(62, 123, 107, 0.4);
+            color: ds.color('text-muted');
           }
 
-          &:focus {
-            border-color: rgba(62, 123, 107, 0.45);
-            background: #fff;
-            box-shadow: 0 0 0 3px rgba(76, 167, 133, 0.1);
+          &:focus-visible {
+            @include ds.field-focus;
+            background: ds.color('surface');
           }
         }
       }
     }
 
     .menu-list {
-      max-height: 200px;
+      max-height: 240px;
       overflow-y: auto;
       padding: 6px;
-
-      &::-webkit-scrollbar {
-        width: 4px;
-      }
-
-      &::-webkit-scrollbar-track {
-        background: transparent;
-      }
-
-      &::-webkit-scrollbar-thumb {
-        background: rgba(62, 123, 107, 0.2);
-        border-radius: 99px;
-      }
+      scrollbar-width: thin;
+      scrollbar-color: ds.color('border-strong') transparent;
     }
 
     .option-group {
@@ -207,7 +192,7 @@
 
       &:not(:last-child) {
         padding-bottom: 6px;
-        border-bottom: 1px solid rgba(62, 123, 107, 0.08);
+        border-bottom: 1px solid ds.color('border');
         margin-bottom: 6px;
       }
 
@@ -222,28 +207,28 @@
           display: inline-flex;
           align-items: center;
           padding: 2px 8px;
-          border-radius: 99px;
-          font-size: 11px;
-          font-weight: 700;
+          border-radius: ds.radius('pill');
+          font-size: ds.font-size('xs');
+          font-weight: ds.font-weight('bold');
 
           &.text {
-            background: rgba(0, 0, 0, 0.05);
-            color: #6b7280;
+            background: ds.color('surface-muted');
+            color: ds.color('text-secondary');
           }
 
           &.number {
-            background: rgba(59, 130, 246, 0.08);
-            color: #2563eb;
+            background: ds.tint('secondary', 8%);
+            color: ds.color('secondary');
           }
 
           &.date {
-            background: rgba(168, 85, 247, 0.08);
-            color: #7c3aed;
+            background: ds.tint('secondary', 8%);
+            color: ds.color('primary-dark');
           }
 
           &.other {
-            background: rgba(62, 123, 107, 0.08);
-            color: var(--primary);
+            background: ds.color('secondary-light');
+            color: ds.color('secondary');
           }
         }
       }
@@ -254,23 +239,31 @@
       align-items: center;
       justify-content: space-between;
       gap: 10px;
-      padding: 7px 12px;
+      min-height: ds.size('control-sm');
+      padding: 6px 10px;
       margin: 2px 0;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-primary);
+      border-radius: ds.radius('sm');
+      @include ds.text('md', 'semibold', 'tight');
+      color: ds.color('text-primary');
       cursor: pointer;
-      transition: background 0.15s ease, color 0.15s ease;
+      transition: background ds.transition('fast'), color ds.transition('fast');
 
-      &:hover {
-        background: rgba(62, 123, 107, 0.07);
-        color: var(--primary);
+      // Hover is neutral slate; green marks only the selected option.
+      &:hover,
+      &:focus-visible {
+        outline: none;
+        background: ds.color('secondary-light');
+        color: ds.color('secondary');
+      }
+
+      &:focus-visible {
+        box-shadow: inset 0 0 0 2px ds.color('focus-ring');
       }
 
       &.selected {
-        background: rgba(62, 123, 107, 0.1);
-        color: var(--primary);
+        background: ds.color('primary-light');
+        color: ds.color('primary-dark');
+        font-weight: ds.font-weight('bold');
       }
 
       .check-icon {
@@ -286,9 +279,8 @@
 
     .no-results {
       text-align: center;
-      padding: 20px;
-      font-size: 13px;
-      color: rgba(62, 123, 107, 0.4);
+      padding: ds.space(5);
+      @include ds.caption;
     }
   }
 }

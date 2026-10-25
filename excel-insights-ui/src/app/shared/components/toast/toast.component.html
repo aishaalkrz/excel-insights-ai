@@ -2,6 +2,8 @@
 
   <div
     class="toast"
+    role="status"
+    aria-live="polite"
     [class.success]="toast.type === 'success'"
     [class.error]="toast.type === 'error'"
     [class.info]="toast.type === 'info'"
@@ -35,7 +37,7 @@
       {{ toast.message }}
     </span>
 
-    <button class="toast-close" (click)="toastService.clear()">
+    <button type="button" aria-label="إغلاق الإشعار" class="toast-close" (click)="toastService.clear()">
       <svg viewBox="0 0 24 24">
         <path d="M18 6L6 18M6 6l12 12" />
       </svg>

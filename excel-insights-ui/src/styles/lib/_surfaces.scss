@@ -1,0 +1,79 @@
+@use 'tokens' as t;
+
+@mixin card($padding: 6, $radius: 'xl', $shadow: 'card') {
+  padding: t.space($padding);
+  border: 1px solid t.color('border');
+  border-radius: t.radius($radius);
+  background: t.color('surface');
+  box-shadow: t.shadow($shadow);
+}
+
+@mixin surface-muted($radius: 'lg') {
+  border: 1px solid t.color('border');
+  border-radius: t.radius($radius);
+  background: t.color('surface-muted');
+}
+
+// Rounded square holding a decorative icon. $tone: primary (green, brand and
+// AI) or secondary (slate, neutral information).
+@mixin icon-badge($size: t.size('icon-badge'), $icon: t.size('icon-md'), $radius: 'md', $tone: 'primary') {
+  width: $size;
+  height: $size;
+  flex: 0 0 $size;
+  display: grid;
+  place-items: center;
+  border-radius: t.radius($radius);
+
+  img,
+  .icon-glyph {
+    width: $icon;
+    height: $icon;
+  }
+
+  .icon-glyph {
+    @include mask-icon(t.color($tone));
+  }
+
+  @include badge-tone($tone);
+}
+
+// Recolours an existing icon badge without repeating its geometry.
+@mixin badge-tone($tone) {
+  background: t.color('#{$tone}-light');
+
+  .icon-glyph {
+    background-color: t.color($tone);
+  }
+}
+
+// Tints a single-colour SVG from tokens. The element sets `--icon: url(...)`.
+@mixin mask-icon($color) {
+  display: block;
+  background-color: $color;
+  -webkit-mask: var(--icon) center / contain no-repeat;
+  mask: var(--icon) center / contain no-repeat;
+}
+
+// Small status pill; $tone is primary, secondary, success, warning or danger.
+@mixin chip($tone: 'primary') {
+  display: inline-flex;
+  align-items: center;
+  gap: t.space(1);
+  min-height: 26px;
+  padding: 2px t.space(3);
+  border-radius: t.radius('pill');
+  font-size: t.font-size('xs');
+  font-weight: t.font-weight('bold');
+  line-height: t.line-height('tight');
+
+  @if $tone == 'primary' {
+    background: t.color('primary-light');
+    color: t.color('primary-dark');
+  } @else if $tone == 'secondary' {
+    background: t.color('secondary-light');
+    color: t.color('secondary');
+  } @else {
+    background: t.color('#{$tone}-soft');
+    color: t.color($tone);
+  }
+}

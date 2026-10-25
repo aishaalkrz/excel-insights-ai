@@ -1,6 +1,10 @@
+@use '../../../../styles/lib' as ds;
+
+@include ds.marketing-page;
+
 :host {
   display: block;
-  background: #fff;
+  background: ds.color('surface');
 }
 
 /* =========================
@@ -28,8 +32,8 @@
   height: 950px;
   background: radial-gradient(
     circle,
-    rgba(76, 167, 133, 0.25),
-    rgba(76, 167, 133, 0.1),
+    ds.tint('primary', 25%),
+    ds.tint('primary', 10%),
     transparent 70%
   );
   filter: blur(120px);
@@ -47,7 +51,7 @@
   margin: 0 auto 80px;
 
   span {
-    color: var(--primary);
+    color: ds.color('primary');
     font-weight: 800;
     letter-spacing: 1px;
   }
@@ -60,7 +64,7 @@
   }
 
   p {
-    color: var(--text-secondary);
+    color: ds.color('text-secondary');
     font-size: 16px;
     line-height: 2;
     max-width: 620px;
@@ -84,11 +88,11 @@
 
 .pricing-card {
   position: relative;
-  background: #fff;
-  border: 1px solid #e8f0ed;
+  background: ds.color('surface');
+  border: 1px solid ds.color('border');
   border-radius: 26px;
   padding: 38px 34px;
-  box-shadow: 0 18px 50px rgba(62, 123, 107, 0.08);
+  box-shadow: 0 18px 50px ds.tint('primary', 8%);
   transition: all 0.35s ease;
   overflow: hidden;
 
@@ -100,7 +104,7 @@
 
   &:hover {
     transform: translateY(-10px);
-    box-shadow: 0 30px 70px rgba(62, 123, 107, 0.18);
+    box-shadow: 0 30px 70px ds.tint('primary', 18%);
   }
 }
 
@@ -109,7 +113,7 @@
 ========================= */
 
 .featured {
-  border: 2px solid rgba(76, 167, 133, 0.35);
+  border: 2px solid ds.tint('primary', 35%);
 
   &::before {
     content: "";
@@ -117,7 +121,7 @@
     inset: -40%;
     background: radial-gradient(
       circle,
-      rgba(76, 167, 133, 0.08),
+      ds.tint('primary', 8%),
       transparent 60%
     );
     opacity: 0.7;
@@ -130,8 +134,7 @@
 ========================= */
 
 .locked {
-  opacity: 0.85;
-  filter: grayscale(0.2);
+  background: ds.color('surface-muted');
 
 }
 
@@ -143,14 +146,14 @@
   margin: 22px 0;
   font-size: 50px;
   font-weight: 900;
-  color: var(--primary);
+  color: ds.color('primary');
 }
 
 .price-soon {
   margin: 22px 0;
   font-size: 32px;
   font-weight: 800;
-  color: #9ca3af;
+  color: ds.color('text-muted');
 }
 
 /* =========================
@@ -162,15 +165,15 @@
   margin-bottom: 18px;
   padding: 7px 14px;
   border-radius: 999px;
-  background: var(--primary-light);
-  color: var(--primary);
+  background: ds.color('primary-light');
+  color: ds.color('primary-dark');
   font-size: 13px;
   font-weight: 800;
 }
 
 .future-badge {
-  background: #f3f4f6;
-  color: #6b7280;
+  background: ds.color('secondary-light');
+  color: ds.color('secondary');
 }
 
 /* =========================
@@ -188,10 +191,10 @@
     gap: 10px;
 
     padding: 10px 0;
-    border-bottom: 1px solid #edf1ef;
+    border-bottom: 1px solid ds.color('border');
 
     font-size: 14px;
-    color: var(--text-secondary);
+    color: ds.color('text-secondary');
   }
 }
 
@@ -228,8 +231,8 @@
   border: none;
   border-radius: 12px;
 
-  background: linear-gradient(135deg, #3e7b6b, #4ca785);
-  color: #fff;
+  background: ds.color('primary');
+  color: ds.color('text-on-primary');
 
   font-weight: 800;
 
@@ -239,13 +242,13 @@
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 18px 40px rgba(62, 123, 107, 0.25);
+    box-shadow: 0 18px 40px ds.tint('primary', 25%);
   }
 }
 
 .primary-btn.disabled {
-  background: #e5e7eb;
-  color: #9ca3af;
+  background: ds.color('secondary-light');
+  color: ds.color('text-secondary');
   cursor: not-allowed;
   box-shadow: none;
 }
@@ -288,3 +291,5 @@
     padding: 26px;
   }
 }
+.future h2, .price-soon { color: ds.color('secondary'); }
+.primary-btn.disabled { opacity: 1; }

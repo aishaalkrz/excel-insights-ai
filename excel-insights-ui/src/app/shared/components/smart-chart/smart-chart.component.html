@@ -1,16 +1,90 @@
 <div class="smart-chart">
 
   @if (previewNotice) {
-    <p class="chart-data-notice" role="note">{{ previewNotice }}</p>
+    @let summary = previewSummary;
+    <div class="chart-notice" [class.is-expanded]="noticeExpanded || !hasPlottableData">
+      <div class="notice-summary">
+        <span class="notice-chip">
+          السجلات المستخدمة
+          <b>{{ summary.records }}</b>
+        </span>
+        <span class="notice-chip">
+          المعروض
+          <b>{{ summary.rendered }}</b>
+          {{ summary.unit }}
+        </span>
+
+        @if (hasPlottableData) {
+          @switch (summary.mode) {
+            @case ('sampled') { <span class="notice-chip notice-chip--warning">عينة حتمية</span> }
+            @case ('reduced') { <span class="notice-chip notice-chip--warning">معاينة مخفّضة</span> }
+            @default { <span class="notice-chip notice-chip--success">جميع السجلات الصالحة</span> }
+          }
+        }
+        @if (summary.partialSource) {
+          <span class="notice-chip notice-chip--warning">مصدر جزئي</span>
+        }
+        @if (summary.hidden) {
+          <span class="notice-chip">فئات مخفية <b>{{ summary.hidden }}</b></span>
+        }
+
+        @if (hasPlottableData && previewNotice.length > longNoticeLength) {
+          <button
+            type="button"
+            class="notice-toggle export-exclude"
+            aria-controls="chart-data-notice"
+            [attr.aria-expanded]="noticeExpanded"
+            (click)="noticeExpanded = !noticeExpanded"
+          >
+            {{ noticeExpanded ? 'إخفاء التفاصيل' : 'عرض التفاصيل' }}
+          </button>
+        }
+      </div>
+
+      <p id="chart-data-notice" class="chart-data-notice" role="note">{{ previewNotice }}</p>
+    </div>
   }
 
-  <div #legendContainer class="legend-container"></div>
+  @if (legendItems.length) {
+    <div
+      class="legend-container"
+      role="group"
+      aria-label="مفتاح الألوان: اضغط على فئة لإخفائها أو إظهارها"
+      [class.is-collapsed]="!legendExpanded && legendItems.length > legendCollapsedLimit"
+    >
+      @for (item of legendItems; track item.label) {
+        <button
+          type="button"
+          class="legend-item"
+          [class.hidden-item]="isCategoryHidden(item.label)"
+          [attr.aria-pressed]="!isCategoryHidden(item.label)"
+          [title]="item.label"
+          [style.--item-color]="item.color"
+          (click)="toggleCategory(item.label)"
+        >
+          <span class="legend-swatch" aria-hidden="true"></span>
+          <small dir="auto">{{ item.label }}</small>
+        </button>
+      }
+    </div>
+
+    @if (legendItems.length > legendCollapsedLimit) {
+      <button
+        type="button"
+        class="legend-more export-exclude"
+        [attr.aria-expanded]="legendExpanded"
+        (click)="legendExpanded = !legendExpanded"
+      >
+        {{ legendExpanded ? 'عرض فئات أقل' : 'عرض كل الفئات (' + legendItems.length + ')' }}
+      </button>
+    }
+  }
 
   @if (!hasPlottableData) {
     <div class="no-results" role="status">لا توجد نتائج</div>
   }
 
   <div class="chart-wrapper" #chartContainer></div>
-  
-  <div #tooltip class="chart-tooltip"></div>
+
+  <div #tooltip class="chart-tooltip" aria-hidden="true"></div>
 </div>

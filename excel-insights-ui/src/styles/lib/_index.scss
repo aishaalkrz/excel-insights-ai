@@ -1,0 +1,10 @@
+// Basira internal style library. Emits no CSS on its own: components
+// `@use '<relative>/styles/lib' as ds;` for tokens and mixins, and only the
+// global stylesheet includes `ds.custom-properties`.
+@forward 'tokens';
+@forward 'breakpoints';
+@forward 'typography';
+@forward 'surfaces';
+@forward 'controls';
+@forward 'layout';
+@forward 'marketing';

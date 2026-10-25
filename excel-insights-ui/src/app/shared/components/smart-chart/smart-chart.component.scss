@@ -1,224 +1,289 @@
+@use '../../../../styles/lib' as ds;
+
 :host {
   display: block;
   width: 100%;
+  min-width: 0;
 }
 
 .smart-chart {
   position: relative;
   width: 100%;
-  min-height: 330px;
-  padding: 12px 12px 24px;
-  border-radius: 18px;
-  background: #fff;
-  box-shadow: none;
-  overflow: visible;
+  min-width: 0;
+  @include ds.stack(3);
+}
 
-  .chart-wrapper {
-    position: relative;
-    width: 100%;
-    height: 430px;
+// Data notices: counts first, the full explanation clamped below them.
+.chart-notice {
+  @include ds.stack(2);
+  padding: ds.space(3);
+  @include ds.surface-muted('md');
+}
+
+.notice-summary {
+  @include ds.cluster(2);
+}
+
+.notice-chip {
+  @include ds.chip('secondary');
+
+  b {
+    @include ds.numeric;
+    font-weight: ds.font-weight('heavy');
+  }
+
+  &--success {
+    @include ds.chip('success');
+  }
+
+  &--warning {
+    @include ds.chip('warning');
+  }
+}
+
+.notice-toggle,
+.legend-more {
+  @include ds.button-link;
+}
+
+.notice-toggle {
+  margin-inline-start: auto;
+}
+
+.chart-data-notice {
+  margin: 0;
+  @include ds.caption;
+  @include ds.break-long-words;
+  @include ds.line-clamp(2);
+
+  .is-expanded & {
+    display: block;
     overflow: visible;
+  }
+}
 
-    svg {
-      width: 100%;
-      height: 100%;
-      overflow: visible;
-      display: block;
+// Legend: wraps centred; with many categories it collapses to two rows
+// behind an explicit "show all" toggle.
+.legend-container {
+  @include ds.cluster(2, center);
+
+  &.is-collapsed {
+    max-height: 76px;
+    overflow: hidden;
+  }
+}
+
+.legend-more {
+  align-self: center;
+}
+
+.legend-item {
+  max-width: 220px;
+  min-height: 32px;
+  padding: ds.space(1) ds.space(3);
+  display: inline-flex;
+  align-items: center;
+  gap: ds.space(2);
+  border: 1px solid ds.color('border');
+  border-radius: ds.radius('pill');
+  background: ds.color('surface');
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color ds.transition('fast'), border-color ds.transition('fast');
+  @include ds.focus-visible;
+
+  &:hover {
+    border-color: ds.color('border-strong');
+    background: ds.color('surface-muted');
+  }
+
+  small {
+    @include ds.truncate-auto;
+    @include ds.text('xs', 'bold', 'tight');
+    color: ds.color('text-primary');
+  }
+
+  // Two pills per row on phones instead of one long column.
+  @include ds.down(sm) {
+    max-width: calc(50% - #{ds.space(1)});
+    padding-inline: ds.space(2);
+  }
+
+  &.hidden-item {
+    background: ds.color('surface-muted');
+
+    .legend-swatch {
+      background-color: transparent;
     }
 
-    ::ng-deep {
-      .grid {
-        path.domain {
-          display: none;
-        }
+    small {
+      color: ds.color('text-muted');
+      text-decoration: line-through;
+    }
+  }
+}
 
-        line {
-          stroke: #CBD5E1;
-          stroke-opacity: 0.45;
-          stroke-width: 1px;
-          stroke-dasharray: 6 4;
-          shape-rendering: crispEdges;
-        }
+.legend-swatch {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 12px;
+  border-radius: 50%;
+  border: 2px solid var(--item-color);
+  background-color: var(--item-color);
+}
+
+.no-results {
+  @include ds.empty-state(200px);
+}
+
+.chart-wrapper {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+
+  // The SVG is drawn at the container's width; margins inside the viewBox
+  // hold every tick label and axis title, so no overflow is needed.
+  ::ng-deep svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    direction: ltr;
+  }
+
+  ::ng-deep {
+    .grid {
+      path.domain {
+        display: none;
       }
 
-      .grid-x line {
-        stroke-opacity: 0.3;
+      line {
+        stroke: ds.color('border-strong');
+        stroke-opacity: 0.45;
+        stroke-width: 1px;
+        stroke-dasharray: 6 4;
+        shape-rendering: crispEdges;
+      }
+    }
+
+    .grid-x line {
+      stroke-opacity: 0.3;
+    }
+
+    .grid-y line {
+      stroke-opacity: 0.5;
+    }
+
+    .axis {
+      color: ds.color('text-secondary');
+
+      path.domain {
+        stroke: ds.color('border-strong');
+        stroke-width: 1.2;
       }
 
-      .grid-y line {
-        stroke-opacity: 0.5;
+      line {
+        display: none;
       }
 
-      .axis {
-        color: var(--text-primary);
-        font-size: 12px;
-        font-weight: 700;
-
-        path.domain {
-          stroke: #d8e4df;
-          stroke-width: 1.2;
-        }
-
-        line {
-          display: none;
-        }
-
-        text {
-          fill: var(--text-secondary);
-          font-size: 12px;
-          font-weight: 700;
-        }
-      }
-
-      .axis-x text {
-        font-size: 10px;
-      }
-
-      .axis-y text {
+      // Sizes match TICK_FONT / TITLE_FONT in smart-chart.component.ts.
+      text {
+        fill: ds.color('text-secondary');
+        font-family: var(--font-family);
         font-size: 11px;
-        transform: translateX(-12px);
-      }
-
-      .axis-label {
-        fill: var(--primary);
-        font-size: 14px;
-        font-weight: 800;
-      }
-
-      .bar {
-        transition: opacity 0.2s ease;
-
-        &:hover {
-          opacity: 0.82;
-        }
-      }
-
-      .line-path {
-        fill: none;
-        stroke: var(--primary);
-        stroke-width: 3.5;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-        filter: drop-shadow(0 6px 10px rgba(62, 123, 107, 0.14));
-      }
-
-      .scatter-dot {
-        cursor: pointer;
+        font-weight: ds.font-weight('bold');
       }
     }
-  }
 
-  ::ng-deep {
-    .legend-container {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 8px 12px;
+    .axis-label {
+      fill: ds.color('secondary');
+      font-family: var(--font-family);
+      font-size: 13px;
+      font-weight: ds.font-weight('heavy');
+    }
 
-      max-height: 75px;
-      overflow-y: auto;
-      margin-bottom: 15px;
-      padding: 5px 10px;
+    .bar {
+      transition: opacity ds.transition('base');
 
-      &::-webkit-scrollbar {
-        width: 4px;
-      }
-
-      &::-webkit-scrollbar-thumb {
-        background: #CBD5E1;
-        border-radius: 4px;
-      }
-
-      .legend-item {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 6px 10px;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-
-        &:hover {
-          background-color: rgba(0, 0, 0, 0.03);
-        }
-
-        span {
-          display: inline-block;
-          flex-shrink: 0;
-          /* لمنع الدائرة من الانضغاط */
-          width: 14px;
-          height: 14px;
-          border-radius: 50%;
-          box-sizing: border-box;
-          background-color: var(--item-color);
-          border: 2px solid var(--item-color);
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-          transition: all 0.2s ease;
-        }
-
-        small {
-          color: #475569;
-          font-size: 13px;
-          font-weight: 700;
-          user-select: none;
-          pointer-events: none;
-          transition: color 0.2s ease;
-        }
-
-        &.hidden-item {
-          span {
-            background-color: transparent !important;
-            box-shadow: none;
-          }
-
-          small {
-            color: #94A3B8;
-          }
-        }
-
-        &:active span {
-          transform: scale(0.85);
-        }
+      &:hover {
+        opacity: 0.82;
       }
     }
+
+    .line-path {
+      fill: none;
+      stroke: ds.color('primary');
+      stroke-width: 3.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .scatter-dot {
+      cursor: pointer;
+    }
   }
+}
+
+.chart-tooltip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: ds.z('tooltip');
+  max-width: min(320px, calc(100vw - 16px));
+  padding: ds.space(2) ds.space(3);
+  border: 1px solid ds.color('border');
+  border-radius: ds.radius('sm');
+  background: ds.color('surface');
+  box-shadow: ds.shadow('popover');
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity ds.transition('fast');
 
   ::ng-deep {
-    .chart-tooltip {
-      position: fixed;
-      pointer-events: none;
-      opacity: 0;
-      z-index: 99999;
-      min-width: max-content;
-      padding: 8px 12px;
-      border-radius: 8px;
-      background: #ffffff;
-      border: 1px solid #e2e8f0;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    .tooltip-row {
       display: flex;
-      flex-direction: row-reverse;
-      /* لعكس ترتيب الاسم والرقم */
       align-items: center;
-      gap: 8px;
-      transition: opacity 0.15s ease;
+      gap: ds.space(2);
+      min-width: 0;
 
-      strong {
-        font-size: 14px;
-        font-weight: 700;
-        line-height: 1;
-        white-space: nowrap;
-      }
-
-      span {
-        color: #0f172a !important;
-        /* لون الرقم */
-        font-size: 13px !important;
-        /* حجم الرقم */
-        font-weight: 700 !important;
-        /* سماكة الرقم */
-        line-height: 1;
-        white-space: nowrap;
+      & + .tooltip-row {
+        margin-top: ds.space(1);
       }
     }
+
+    .tooltip-swatch {
+      width: 10px;
+      height: 10px;
+      flex: 0 0 10px;
+      border-radius: 50%;
+    }
+
+    .tooltip-label {
+      @include ds.truncate;
+      @include ds.text('xs', 'bold', 'tight');
+      color: ds.color('text-secondary');
+    }
+
+    .tooltip-value {
+      margin-inline-start: auto;
+      @include ds.numeric;
+      @include ds.text('sm', 'heavy', 'tight');
+      color: ds.color('text-primary');
+    }
+  }
+}
+
+// Exports capture the whole legend and notice; interactive toggles are hidden.
+:host-context(.is-exporting) {
+  .legend-container.is-collapsed {
+    max-height: none;
+  }
+
+  .chart-data-notice {
+    display: block;
+    overflow: visible;
+  }
+
+  .export-exclude {
+    display: none;
   }
 }

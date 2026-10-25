@@ -1,17 +1,30 @@
 <div class="dashboard-shell" *ngIf="result as data" dir="rtl">
   <header class="dashboard-header">
     <div class="header-title">
-      <div class="user-avatar">ب</div>
-      <h1>لوحة التحكم</h1>
+      <div class="user-avatar" aria-hidden="true">ب</div>
+      <div class="header-text">
+        <h1>لوحة التحكم</h1>
+        @if (data.filename) {
+        <p class="header-meta" [title]="data.filename">
+          <bdi>{{ data.filename }}</bdi>
+          @if (uploadedAgo) { <span aria-hidden="true">·</span> {{ uploadedAgo }} }
+        </p>
+        }
+      </div>
     </div>
 
     <div class="header-actions">
-      <button type="button" class="header-export-btn" (click)="exportDashboardPdf()">
+      <button
+        type="button"
+        class="header-export-btn"
+        aria-label="تصدير التقرير PDF"
+        [disabled]="isExportingPdf()"
+        [attr.aria-busy]="isExportingPdf()"
+        (click)="exportDashboardPdf()"
+      >
         <img src="/icons/upload.svg" alt="" />
-        تصدير التقرير
+        <span class="btn-text">{{ isExportingPdf() ? 'جارٍ التصدير…' : 'تصدير التقرير' }}</span>
       </button>
-
-      
     </div>
   </header>
 
@@ -21,8 +34,8 @@
       <strong>بصيرة</strong>
     </div>
 
-    <nav class="sidebar-nav">
-      <a class="active">
+    <nav class="sidebar-nav" aria-label="التنقل الرئيسي">
+      <a class="active" aria-current="page">
         <img src="/icons/controlpanel.svg" alt="" />
         لوحة التحكم
       </a>
@@ -44,97 +57,102 @@
     </nav>
   </aside>
 
-  <main class="dashboard-page" *ngIf="currentSheet"  id="dashboard-export">
-    <section class="dashboard-top">
-      <div class="dataset-info compact-info">
-        <div class="info-card">
-          <div class="info-content">
-            <span>عدد السجلات</span>
-            <strong>{{ currentSheet.row_count }}</strong>
-          </div>
-
-          <span class="info-icon">
-            <img src="/icons/direct.svg" alt="" />
-          </span>
-        </div>
-
-        <div class="info-card">
-          <div class="info-content">
-            <span>عدد الأعمدة</span>
-            <strong>{{ currentSheet.column_count }}</strong>
-          </div>
-
-          <span class="info-icon">
-            <img src="/icons/row-horizontal.svg" alt="" />
-          </span>
-        </div>
-
-        <div class="info-card">
-          <div class="info-content">
-            <span>حجم الملف</span>
-            <strong>{{ data.file_size || '-' }}</strong>
-          </div>
-
-          <span class="info-icon">
-            <img src="/icons/size-file.svg" alt="" />
-          </span>
+  <main class="dashboard-page" *ngIf="currentSheet" id="dashboard-export">
+    <section class="dataset-info" aria-label="معلومات الملف">
+      <div class="info-card">
+        <span class="info-icon" aria-hidden="true">
+          <span class="icon-glyph" style="--icon: url('/icons/direct.svg')"></span>
+        </span>
+        <div class="info-content">
+          <span>عدد السجلات</span>
+          <strong><bdi>{{ currentSheet.row_count }}</bdi></strong>
         </div>
       </div>
 
-      <div class="file-card compact-file-card">
-          <div class="info-content">
-            @if ((data.available_sheets?.length || 0) > 1) {
-              <app-dropdown
-                class="sheet-dropdown"
-                [config]="sheetDropdown"
-                (selectionChange)="onSheetChange($event)"
-              />
-            } @else {
-              <strong>{{ selectedSheetName || '-' }}</strong>
-            }
-          </div>
-
-          <span class="info-icon">
-            <img src="/icons/files.svg" alt="" />
-          </span>
+      <div class="info-card">
+        <span class="info-icon" aria-hidden="true">
+          <span class="icon-glyph" style="--icon: url('/icons/row-horizontal.svg')"></span>
+        </span>
+        <div class="info-content">
+          <span>عدد الأعمدة</span>
+          <strong><bdi>{{ currentSheet.column_count }}</bdi></strong>
         </div>
+      </div>
+
+      <div class="info-card">
+        <span class="info-icon" aria-hidden="true">
+          <span class="icon-glyph" style="--icon: url('/icons/size-file.svg')"></span>
+        </span>
+        <div class="info-content">
+          <span>حجم الملف</span>
+          <strong><bdi>{{ data.file_size || '-' }}</bdi></strong>
+        </div>
+      </div>
+
+      <div class="info-card sheet-card">
+        <span class="info-icon" aria-hidden="true">
+          <span class="icon-glyph" style="--icon: url('/icons/files.svg')"></span>
+        </span>
+        <div class="info-content">
+          <span>{{ sheetDropdown.label }}</span>
+          @if ((data.available_sheets?.length || 0) > 1) {
+          <app-dropdown
+            class="sheet-dropdown"
+            [config]="sheetDropdown"
+            (selectionChange)="onSheetChange($event)"
+          />
+          } @else {
+          <strong class="sheet-name" dir="auto" [title]="selectedSheetName">{{ selectedSheetName || '-' }}</strong>
+          }
+        </div>
+      </div>
     </section>
 
-    <section class="big-number-grid" [class.kpi-count-1]="bigNumbers.length === 1"
+    @if (bigNumbers.length) {
+    <section class="big-number-grid" aria-label="المؤشرات الرئيسية" [class.kpi-count-1]="bigNumbers.length === 1"
       [class.kpi-count-2]="bigNumbers.length === 2" [class.kpi-count-3]="bigNumbers.length === 3"
       [class.kpi-count-4]="bigNumbers.length >= 4">
       @for (kpi of bigNumbers; track kpi.label) {
-      <article class="big-number-card" [style.--kpi-color]="kpi.color" [style.--kpi-bg]="kpi.background">
-        <div class="kpi-icon">
+      <article class="big-number-card" [class.kpi--secondary]="kpiTone(kpi) === 'secondary'">
+        <div class="kpi-icon" aria-hidden="true">
           <span class="kpi-glyph" [style.mask-image]="'url(' + kpi.icon + ')'"
             [style.-webkit-mask-image]="'url(' + kpi.icon + ')'"></span>
         </div>
 
-        <span>{{ kpi.label }}</span>
-        <strong>{{ kpi.value ?? '—' }}</strong>
-        <small>{{ kpi.description }}</small>
+        <div class="kpi-body">
+          <span class="kpi-label"><bdi>{{ kpi.label }}</bdi></span>
+          <strong>{{ kpi.value ?? '—' }}</strong>
+          @if (kpi.description) {
+          <small>{{ kpi.description }}</small>
+          }
+        </div>
       </article>
       }
     </section>
+    }
 
-    <section class="table-card">
+    <section class="table-card" aria-labelledby="table-preview-title">
       <div class="section-head">
         <div>
-          <h2>معاينة البيانات</h2>
+          <h2 id="table-preview-title">معاينة البيانات</h2>
+          @if (currentSheet.columns.length > 6) {
+          <p>يعرض أول 6 أعمدة من {{ currentSheet.columns.length }}. افتح العرض الكامل لرؤية جميع الأعمدة.</p>
+          }
         </div>
 
-        <button type="button" (click)="openTableModal()">
+        <button type="button" class="primary-btn" (click)="openTableModal()">
           <img src="/icons/arrow-right.svg" alt="" />
           عرض كامل البيانات
         </button>
       </div>
 
-      <div class="table-wrapper">
+      @if (currentSheet.sample_data?.length) {
+      <div class="table-wrapper" tabindex="0" role="region" aria-labelledby="table-preview-title">
         <table>
           <thead>
             <tr>
               @for (col of currentSheet.columns.slice(0, 6); track col) {
-              <th>{{ col }}</th>
+              <th scope="col" [title]="col"><bdi>{{ col }}</bdi></th>
               }
             </tr>
           </thead>
@@ -143,34 +161,49 @@
             @for (row of currentSheet.sample_data; track $index) {
             <tr>
               @for (col of currentSheet.columns.slice(0, 6); track col) {
-              <td>{{ row[col] }}</td>
+              <td [title]="row[col] ?? ''"><bdi>{{ row[col] }}</bdi></td>
               }
             </tr>
             }
           </tbody>
         </table>
       </div>
+      } @else {
+      <div class="empty-state" role="status">لا توجد صفوف لعرضها في هذا الشيت.</div>
+      }
     </section>
 
-    <section class="chart-builder-card">
+    <section class="chart-builder-card" aria-labelledby="chart-settings-title">
       <div class="chart-builder-layout">
         <aside class="chart-settings-card">
           <div class="chart-settings-head">
-            <span class="section-icon">
-              <img src="/icons/setting-draw.svg" alt="" />
+            <span class="section-icon" aria-hidden="true">
+              <span class="icon-glyph" style="--icon: url('/icons/setting-draw.svg')"></span>
             </span>
-
-            <div>
-              <h2>إعدادات الرسم</h2>
-            </div>
+            <h2 id="chart-settings-title">إعدادات الرسم</h2>
           </div>
 
           <div class="chart-controls">
             <div class="chart-title-field">
-              <label>اسم الرسم</label>
+              <div class="field-label-row">
+                <label for="chart-title-input">اسم الرسم</label>
+                @if (isChartTitleCustom) {
+                <button type="button" class="title-reset" (click)="resetChartTitle()">
+                  استخدام العنوان التلقائي
+                </button>
+                } @else if (autoChartTitle) {
+                <span class="title-mode">تلقائي</span>
+                }
+              </div>
 
-              <input type="text" [value]="chartTitle" (input)="onChartTitleChange($event)"
-                placeholder="ضع اسماً للرسم البياني" />
+              <input
+                id="chart-title-input"
+                type="text"
+                [value]="chartTitle"
+                [placeholder]="autoChartTitle || 'ضع اسماً للرسم البياني'"
+                (input)="onChartTitleChange($event)"
+                (blur)="onChartTitleBlur()"
+              />
             </div>
 
             <app-dropdown [config]="chartTypeDropdown" (selectionChange)="onChartTypeChange($event)" />
@@ -180,19 +213,23 @@
             <app-dropdown [config]="yAxisDropdown" (selectionChange)="onYAxisChange($event)" />
           </div>
 
-          <button type="button" class="export-chart-btn" (click)="exportChart()">
+          <button
+            type="button"
+            class="export-chart-btn"
+            [disabled]="!chartSuggestions[0] || isExportingChart()"
+            [attr.aria-busy]="isExportingChart()"
+            (click)="exportChart()"
+          >
             <img src="/icons/upload.svg" alt="" />
-            تصدير الرسم
+            {{ isExportingChart() ? 'جارٍ التصدير…' : 'تصدير الرسم PNG' }}
           </button>
         </aside>
 
         <div class="chart-preview-card">
           <div class="chart-preview-head">
-            <div>
-              <h2 [class.placeholder-title]="!chartTitle?.trim()">
-                {{ chartTitle || chartSuggestions[0]?.title || 'ضع اسماً للرسم البياني' }}
-              </h2>
-            </div>
+            <h2 [class.placeholder-title]="!(chartSuggestions[0]?.title || effectiveChartTitle)">
+              {{ chartSuggestions[0]?.title || effectiveChartTitle || 'ضع اسماً للرسم البياني' }}
+            </h2>
           </div>
 
           <div class="chart-view">
@@ -209,23 +246,23 @@
     </section>
 
     @if (smartInsights) {
-    <section class="ai-insights">
+    <section class="ai-insights" aria-labelledby="ai-insights-title">
       <div class="section-head">
         <div>
-          <h2>تقرير ذكي عن البيانات</h2>
+          <h2 id="ai-insights-title">تقرير ذكي عن البيانات</h2>
           <p>ملخص تلقائي للرؤى والملاحظات المهمة بناءً على أول شيت تم تحليله.</p>
         </div>
 
-        <span class="section-icon">
-          <img src="/icons/ai.svg" alt="" />
+        <span class="section-icon" aria-hidden="true">
+          <span class="icon-glyph" style="--icon: url('/icons/ai.svg')"></span>
         </span>
       </div>
 
       <div class="insights-container">
         <article class="insight-block summary-card">
           <div class="insight-title">
-            <span>
-              <img src="/icons/reports-green.svg" alt="" />
+            <span class="insight-icon" aria-hidden="true">
+              <span class="icon-glyph" style="--icon: url('/icons/reports-green.svg')"></span>
             </span>
             <h3>الملخص التنفيذي</h3>
           </div>
@@ -235,8 +272,8 @@
 
         <article class="insight-block points-card">
           <div class="insight-title">
-            <span>
-              <img src="/icons/direct.svg" alt="" />
+            <span class="insight-icon" aria-hidden="true">
+              <span class="icon-glyph" style="--icon: url('/icons/direct.svg')"></span>
             </span>
             <h3>أبرز الملاحظات</h3>
           </div>
@@ -250,8 +287,8 @@
 
         <article class="insight-block recommendation-card">
           <div class="insight-title">
-            <span>
-              <img src="/icons/tick-circle.svg" alt="" />
+            <span class="insight-icon" aria-hidden="true">
+              <span class="icon-glyph" style="--icon: url('/icons/tick-circle.svg')"></span>
             </span>
             <h3>التوصية المقترحة</h3>
           </div>
