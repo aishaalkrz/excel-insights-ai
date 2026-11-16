@@ -1,0 +1,101 @@
+<nav class="navbar">
+
+  <div class="brand">
+    <div class="logo-icon">
+      <img src="/icons/logo.svg" alt="Basira Logo" />
+    </div>
+
+    <div class="brand-text">
+      <strong>بصيرة</strong>
+      <small>حوّل بياناتك إلى رؤى واضحة</small>
+    </div>
+  </div>
+
+  <ul class="nav-links">
+    <li>
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        الرئيسية
+      </a>
+    </li>
+
+    <li>
+      <a routerLink="/features" routerLinkActive="active">
+        المميزات
+      </a>
+    </li>
+
+    <li>
+      <a routerLink="/how-it-works" routerLinkActive="active">
+        كيف يعمل
+      </a>
+    </li>
+
+    <li>
+      <a routerLink="/pricing" routerLinkActive="active">
+        الأسعار
+      </a>
+    </li>
+  </ul>
+
+  <div class="nav-actions">
+    <button class="outline-btn">إنشاء حساب</button>
+    <button class="primary-btn">تسجيل الدخول</button>
+  </div>
+
+  <button class="menu-btn" type="button" (click)="toggleMenu()">
+    <img src="/icons/menu.svg" alt="menu" />
+  </button>
+
+</nav>
+
+<div class="mobile-menu" [class.open]="isMenuOpen" (click)="closeMenu()">
+  <div class="mobile-menu-panel" (click)="$event.stopPropagation()">
+
+    <div class="mobile-menu-header">
+      <div class="mobile-menu-brand">
+        <img src="/icons/logo.svg" alt="" />
+
+        <div>
+          <strong>بصيرة</strong>
+          <small>حوّل بياناتك إلى رؤى واضحة</small>
+        </div>
+      </div>
+
+      <button class="close-menu" type="button" (click)="closeMenu()">
+        <img src="/icons/close.svg" alt="close" />
+      </button>
+    </div>
+
+    <ul>
+      <li>
+        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeMenu()">
+          الرئيسية
+        </a>
+      </li>
+
+      <li>
+        <a routerLink="/features" routerLinkActive="active" (click)="closeMenu()">
+          المميزات
+        </a>
+      </li>
+
+      <li>
+        <a routerLink="/how-it-works" routerLinkActive="active" (click)="closeMenu()">
+          كيف يعمل
+        </a>
+      </li>
+
+      <li>
+        <a routerLink="/pricing" routerLinkActive="active" (click)="closeMenu()">
+          الأسعار
+        </a>
+      </li>
+    </ul>
+
+    <div class="mobile-auth">
+      <button class="primary-btn">تسجيل الدخول</button>
+      <button class="outline-btn">إنشاء حساب</button>
+    </div>
+
+  </div>
+</div>

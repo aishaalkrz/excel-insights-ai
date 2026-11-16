@@ -1,0 +1,88 @@
+<div class="dropdown-field" #dropdownRef>
+  @if (!config().hideLabel) {
+  <label>{{ config().label }}</label>
+  }
+
+  <div class="custom-select" [class.disabled]="config().disabled" (click)="toggleDropdown()">
+
+    <div class="selected-content">
+      @if (config().showIcons && selectedOption()?.icon) {
+      <span class="option-icon">
+        <img [src]="selectedOption()?.icon" alt="" />
+      </span>
+      }
+      <span class="selected-label">{{ selectedLabel() }}</span>
+    </div>
+
+    <i class="chevron" [class.open]="isOpen()"></i>
+  </div>
+
+  @if (isOpen()) {
+  <div class="dropdown-menu" [class.open-top]="config().placement === 'top'" role="listbox">
+
+    <div class="search-box" (click)="$event.stopPropagation()">
+      <div class="search-input-wrapper">
+        <div class="search-icon-wrap">
+          @if (searchQuery()) {
+          <button class="clear-btn" (click)="searchQuery.set(''); $event.stopPropagation()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="none" viewBox="0 0 24 24">
+              <path stroke="#3E7B6B" stroke-width="2.5" stroke-linecap="round" d="M18 6 6 18M6 6l12 12" />
+            </svg>
+          </button>
+          } @else {
+          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none"
+            viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8" stroke="#3E7B6B" stroke-width="2" />
+            <path stroke="#3E7B6B" stroke-width="2" stroke-linecap="round" d="m21 21-4.35-4.35" />
+          </svg>
+          }
+        </div>
+
+        <input #searchInput type="text" placeholder="بحث..." [value]="searchQuery()"
+          (input)="searchQuery.set($any($event.target).value)" (click)="$event.stopPropagation()" />
+      </div>
+    </div>
+
+    <div class="menu-list">
+      @for (group of filteredGroups(); track group.type) {
+      <div class="option-group">
+
+        @if (config().grouped && group.label) {
+        <span class="group-label">
+          @if (group.type === 'text') { <span class="group-tag text">نص</span> }
+          @if (group.type === 'number') { <span class="group-tag number">رقم</span> }
+          @if (group.type === 'date') { <span class="group-tag date">تاريخ</span> }
+          @if (group.type === 'other') { <span class="group-tag other">أخرى</span> }
+        </span>
+        }
+
+        @for (option of group.options; track option.value) {
+        <div class="dropdown-option" role="option" [class.selected]="option.value === config().selectedValue"
+          (click)="selectOption(option)">
+          <div class="option-content">
+            @if (config().showIcons && option.icon) {
+            <span class="option-icon">
+              <img [src]="option.icon" alt="" />
+            </span>
+            }
+            <span class="option-label">{{ option.label }}</span>
+          </div>
+
+          @if (option.value === config().selectedValue) {
+          <span class="check-icon">
+            <img src="/icons/check-true.svg" alt="Selected" />
+          </span>
+          }
+        </div>
+        }
+      </div>
+      }
+
+      @if (filteredGroups().length === 0) {
+      <div class="no-results">لا توجد نتائج</div>
+      }
+    </div>
+
+  </div>
+  }
+</div>

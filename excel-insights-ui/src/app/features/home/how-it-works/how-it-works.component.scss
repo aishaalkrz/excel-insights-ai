@@ -1,0 +1,338 @@
+:host {
+  display: block;
+  background: #fff;
+}
+
+/* =========================
+   PAGE WRAPPER
+========================= */
+
+.how-page {
+  position: relative;
+  width: min(100%);
+  margin-inline: auto;
+  padding: 30px 0 110px;
+  overflow: hidden;
+}
+
+/* =========================
+   GLOW BACKGROUND
+========================= */
+
+.hero-glow {
+  position: absolute;
+  top: -210px;
+  right: 50%;
+  transform: translateX(50%);
+  width: 900px;
+  height: 900px;
+  background: radial-gradient(circle,
+      rgba(76, 167, 133, .18),
+      transparent 70%);
+  filter: blur(100px);
+  opacity: .9;
+}
+
+/* =========================
+   HERO
+========================= */
+
+.how-hero {
+  text-align: center;
+  max-width: 780px;
+  margin: 0 auto 90px;
+
+  span {
+    color: var(--primary);
+    font-weight: 800;
+    letter-spacing: 1px;
+  }
+
+  h1 {
+    font-size: 54px;
+    font-weight: 900;
+    margin: 16px 0;
+    transition: transform .5s ease;
+  }
+
+  p {
+    color: var(--text-secondary);
+    font-size: 17px;
+    line-height: 2;
+  }
+}
+
+/* =========================
+   TIMELINE
+========================= */
+
+.timeline {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 80px;
+  margin: 50px;
+}
+
+/* line */
+.timeline-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 50%;
+  width: 3px;
+  background: linear-gradient(to bottom, var(--primary), transparent);
+  transform: translateX(50%);
+  opacity: .3;
+}
+
+/* =========================
+   STEP
+========================= */
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 50px;
+  position: relative;
+  perspective: 1000px;
+}
+
+/* LEFT / RIGHT */
+.step.left {
+  flex-direction: row;
+}
+
+.step.right {
+  flex-direction: row-reverse;
+}
+
+.dot {
+  width: 82px;
+  height: 82px;
+
+  border-radius: 50%;
+
+  position: relative;
+
+  display: grid;
+  place-items: center;
+
+  font-size: 28px;
+  font-weight: 900;
+  color: #fff;
+
+  background: linear-gradient(145deg, #3e7b6b, #4ca785);
+
+  box-shadow:
+    0 12px 30px rgba(62, 123, 107, 0.25),
+    inset 0 2px 6px rgba(255, 255, 255, 0.25);
+
+  transition: all .4s ease;
+}
+
+/* outer ring */
+.dot::before {
+  content: "";
+
+  position: absolute;
+
+  inset: -10px;
+
+  border-radius: 50%;
+
+  border: 2px solid rgba(76, 167, 133, 0.25);
+
+  filter: blur(.2px);
+
+  opacity: .8;
+
+  transition: all .4s ease;
+}
+
+/* glow */
+.dot::after {
+  content: "";
+
+  position: absolute;
+
+  inset: -18px;
+
+  border-radius: 50%;
+
+  background: radial-gradient(circle,
+      rgba(76, 167, 133, 0.25),
+      transparent 70%);
+
+  filter: blur(10px);
+
+  opacity: .6;
+
+  z-index: -1;
+}
+
+/* CONTENT CARD */
+.content {
+  width: 340px;
+
+  background: #fff;
+  border: 1px solid #e8f0ed;
+
+  padding: 24px 28px;
+
+  border-radius: 20px;
+
+  box-shadow: 0 12px 30px rgba(62, 123, 107, .08);
+
+  transition: transform .4s ease, box-shadow .4s ease;
+}
+
+/* =========================
+   HOVER EFFECTS
+========================= */
+
+.step:hover .content {
+  transform: translateY(-10px) rotateX(4deg);
+  box-shadow: 0 25px 60px rgba(62, 123, 107, .18);
+}
+
+.step:hover .dot {
+  transform: scale(1.12) rotate(8deg);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, .18);
+}
+
+/* =========================
+   TEXT
+========================= */
+
+.content h3 {
+  margin: 0 0 10px;
+  color: var(--primary);
+  font-weight: 800;
+  font-size: 20px;
+}
+
+.content p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.9;
+}
+
+/* =========================
+   ANIMATION ON LOAD
+========================= */
+
+.step {
+  opacity: 0;
+  transform: translateY(40px);
+  animation: fadeUp .8s ease forwards;
+}
+
+.step:nth-child(1) {
+  animation-delay: .1s;
+}
+
+.step:nth-child(2) {
+  animation-delay: .25s;
+}
+
+.step:nth-child(3) {
+  animation-delay: .4s;
+}
+
+@keyframes fadeUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =========================
+   TABLET
+========================= */
+
+@media (max-width: 992px) {
+
+  .how-page {
+    width: calc(100% - 40px);
+  }
+
+  .how-hero h1 {
+    font-size: 42px;
+  }
+
+  .content {
+    width: 300px;
+  }
+}
+
+/* =========================
+   MOBILE
+========================= */
+
+@media (max-width: 768px) {
+
+  .how-page {
+    position: relative;
+    width: 100%;
+
+    padding-inline: clamp(18px, 4vw, 80px);
+
+    margin-inline: auto;
+
+    padding-top: 50px;
+    padding-right: 30px;
+    padding-bottom: 110px;
+
+    overflow: hidden;
+  }
+
+  .how-hero h1 {
+    margin-top: 30px;
+  }
+
+  /* 🔥 remove big spacing */
+  .timeline {
+    margin: 20px 0;
+    gap: 50px;
+  }
+
+  /* 🔥 move line to left side */
+  .timeline-line {
+    right: auto;
+    left: 30px;
+    transform: none;
+  }
+
+  /* 🔥 stack properly */
+  .step {
+    flex-direction: row !important;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  /* 🔥 shrink circle */
+  .dot {
+    width: 52px;
+    height: 52px;
+    font-size: 18px;
+  }
+
+  /* 🔥 fix content */
+  .content {
+    width: calc(100% - 80px);
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  /* 🔥 hero fix */
+  .how-hero h1 {
+    font-size: 30px;
+    line-height: 1.4;
+  }
+
+  .how-hero p {
+    font-size: 15px;
+  }
+}

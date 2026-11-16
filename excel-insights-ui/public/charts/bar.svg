@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 168 120" fill="none" fit="" preserveAspectRatio="xMidYMid meet" focusable="false">
+  <style>
+    .bar-group {
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), filter 0.3s ease;
+      transform-origin: bottom;
+      transform-box: fill-box;
+      cursor: pointer;
+    }
+    .bar-group:hover {
+      transform: scaleY(1.05);
+      filter: drop-shadow(0px -2px 8px rgba(62, 123, 107, 0.5));
+    }
+  </style>
+
+  <mask id="mask0_bar_chart" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="168" height="120">
+    <line x1="24.5" y1="0" x2="24.5" y2="120" stroke="white"/>
+    <line x1="72.5" y1="0" x2="72.5" y2="120" stroke="white"/>
+    <line x1="120.5" y1="0" x2="120.5" y2="120" stroke="white"/>
+    <line x1="48.5" y1="0" x2="48.5" y2="120" stroke="white"/>
+    <line x1="96.5" y1="0" x2="96.5" y2="120" stroke="white"/>
+    <line x1="144.5" y1="0" x2="144.5" y2="120" stroke="white"/>
+    <line y1="23.5" x2="168" y2="23.5" stroke="white"/>
+    <line y1="95.5" x2="168" y2="95.5" stroke="white"/>
+    <line y1="47.5" x2="168" y2="47.5" stroke="white"/>
+    <line y1="71.5" x2="168" y2="71.5" stroke="white"/>
+  </mask>
+
+  <g mask="url('#mask0_bar_chart')">
+    <rect width="168" height="120" fill="url('#paint0_radial_bar')"/>
+  </g>
+
+  <g class="bar-group">
+    <path d="M49 52C49 50.8954 49.8954 50 51 50H70C71.1046 50 72 50.8954 72 52V95H49V52Z" fill="#75A698"/>
+    <path d="M49 52C49 50.8954 49.8954 50 51 50H70C71.1046 50 72 50.8954 72 52V95H49V52Z" fill="url('#paint1_linear_bar')" fill-opacity="0.2"/>
+  </g>
+
+  <g class="bar-group">
+    <path d="M73 35C73 33.8954 73.8954 33 75 33H94C95.1046 33 96 33.8954 96 35V95H73V35Z" fill="#3E7B6B"/>
+    <path d="M73 35C73 33.8954 73.8954 33 75 33H94C95.1046 33 96 33.8954 96 35V95H73V35Z" fill="url('#paint2_linear_bar')" fill-opacity="0.2"/>
+  </g>
+
+  <g class="bar-group">
+    <path d="M97 61C97 59.8954 97.8954 59 99 59H119C120.105 59 121 59.8954 121 61V95H97V61Z" fill="#2D5F52"/>
+    <path d="M97 61C97 59.8954 97.8954 59 99 59H119C120.105 59 121 59.8954 121 61V95H97V61Z" fill="url('#paint3_linear_bar')" fill-opacity="0.2"/>
+  </g>
+
+  <line x1="0" y1="95.5" x2="168" y2="95.5" stroke="url('#paint4_linear_bar')"/>
+
+  <defs>
+    <radialGradient id="paint0_radial_bar" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(84 60) rotate(90) scale(60 84)">
+      <stop stop-color="#75A698" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#75A698" stop-opacity="0"/>
+    </radialGradient>
+    
+    <linearGradient id="paint1_linear_bar" x1="60.5" y1="50" x2="60.5" y2="95" gradientUnits="userSpaceOnUse">
+      <stop stop-color="white" stop-opacity="0"/>
+      <stop offset="1" stop-color="white"/>
+    </linearGradient>
+    <linearGradient id="paint2_linear_bar" x1="84.5" y1="33" x2="84.5" y2="95" gradientUnits="userSpaceOnUse">
+      <stop stop-color="white" stop-opacity="0"/>
+      <stop offset="1" stop-color="white"/>
+    </linearGradient>
+    <linearGradient id="paint3_linear_bar" x1="109" y1="59" x2="109" y2="95" gradientUnits="userSpaceOnUse">
+      <stop stop-color="white" stop-opacity="0"/>
+      <stop offset="1" stop-color="white"/>
+    </linearGradient>
+    
+    <linearGradient id="paint4_linear_bar" x1="0" y1="96.5" x2="168" y2="96.5" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3E7B6B" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#3E7B6B"/>
+      <stop offset="0.995192" stop-color="#3E7B6B" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+</svg>

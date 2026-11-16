@@ -3,6 +3,8 @@ import { ExcelService } from '../../services/excel.service';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AnalysisStateService } from '../../services/analysis-state.service';
+import { ToastService } from '../../shared/components/toast/toast.service';
+import { finalize } from 'rxjs';
 
 @Component({
   selector: 'app-home',
@@ -19,7 +21,13 @@ export class HomeComponent {
   private excelService = inject(ExcelService);
   private analysisState = inject(AnalysisStateService);
   private router = inject(Router);
+  private toast = inject(ToastService);
 
+  isMenuOpen = false;
+
+  toggleMenu() {
+    this.isMenuOpen = !this.isMenuOpen;
+  }
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
 
@@ -34,24 +42,35 @@ export class HomeComponent {
 
   analyzeData(): void {
     if (!this.selectedFile) {
-      this.errorMessage = 'Please upload an Excel or CSV file first.';
+      this.errorMessage = 'يرجى رفع ملف Excel أو CSV أولاً.';
+      this.toast.error('يرجى رفع ملف Excel أو CSV أولاً');
       return;
     }
 
     this.loading = true;
     this.errorMessage = '';
 
-    this.excelService.uploadFile(this.selectedFile).subscribe({
-      next: (response) => {
-        this.analysisState.setResult(response);
-        this.loading = false;
-        this.router.navigate(['/dashboard']);
-      },
-      error: (error) => {
-        console.error(error);
-        this.errorMessage = 'Something went wrong while analyzing the file.';
-        this.loading = false;
-      }
-    });
+    this.excelService.uploadFile(this.selectedFile)
+      .pipe(
+        finalize(() => {
+          this.loading = false;
+        })
+      )
+      .subscribe({
+        next: (response) => {
+          this.analysisState.setResult(response);
+          localStorage.setItem('analysisResult', JSON.stringify(response));
+          this.router.navigate(['/dashboard']);
+        },
+
+        error: (error) => {
+          console.error(error);
+
+          this.errorMessage =
+            'حدث خطأ أثناء تحليل الملف. يرجى المحاولة مرة أخرى.';
+
+          this.toast.error('فشل تحليل الملف');
+        }
+      });
   }
 }

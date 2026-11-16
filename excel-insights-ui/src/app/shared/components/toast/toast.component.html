@@ -1,0 +1,46 @@
+@if (toastService.toast(); as toast) {
+
+  <div
+    class="toast"
+    [class.success]="toast.type === 'success'"
+    [class.error]="toast.type === 'error'"
+    [class.info]="toast.type === 'info'"
+    (mouseenter)="toastService.pauseTimer()"
+    (mouseleave)="toastService.resumeTimer()"
+  >
+
+    <span class="toast-icon">
+      @if (toast.type === 'success') {
+        <svg viewBox="0 0 24 24">
+          <path d="M20 6L9 17L4 12" />
+        </svg>
+      }
+
+      @if (toast.type === 'error') {
+        <svg viewBox="0 0 24 24">
+          <path d="M18 6L6 18" />
+          <path d="M6 6L18 18" />
+        </svg>
+      }
+
+      @if (toast.type === 'info') {
+        <svg viewBox="0 0 24 24">
+        <path d="M12 5V14"></path>
+        <path d="M12 18H12.01"></path>
+        </svg>
+      }
+    </span>
+
+    <span class="toast-message">
+      {{ toast.message }}
+    </span>
+
+    <button class="toast-close" (click)="toastService.clear()">
+      <svg viewBox="0 0 24 24">
+        <path d="M18 6L6 18M6 6l12 12" />
+      </svg>
+    </button>
+
+  </div>
+
+}

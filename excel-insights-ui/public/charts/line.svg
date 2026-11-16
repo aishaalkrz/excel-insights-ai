@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 131 93" fill="none" fit="" preserveAspectRatio="xMidYMid meet" focusable="false">
+  <style>
+    /* Add smooth hover effect for the data points */
+    .data-point {
+      transition: all 0.3s ease;
+      transform-origin: center;
+      cursor: pointer;
+    }
+    .data-point:hover {
+      r: 3;
+      filter: drop-shadow(0px 0px 4px rgba(117, 166, 152, 0.8));
+      stroke: #75A698;
+    }
+    .line-path {
+      filter: drop-shadow(0px 4px 6px rgba(62, 123, 107, 0.2));
+    }
+  </style>
+
+  <mask id="mask0_line_chart" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="131" height="93">
+    <line x1="18.9876" y1="1.69382e-08" x2="18.9876" y2="93" stroke="white" stroke-width="0.775"/>
+    <line x1="56.1873" y1="1.69382e-08" x2="56.1873" y2="93" stroke="white" stroke-width="0.775"/>
+    <line x1="93.3875" y1="1.69382e-08" x2="93.3875" y2="93" stroke="white" stroke-width="0.775"/>
+    <line x1="37.5877" y1="1.69382e-08" x2="37.5877" y2="93" stroke="white" stroke-width="0.775"/>
+    <line x1="74.7874" y1="1.69382e-08" x2="74.7874" y2="93" stroke="white" stroke-width="0.775"/>
+    <line x1="111.988" y1="1.69382e-08" x2="111.988" y2="93" stroke="white" stroke-width="0.775"/>
+    <line y1="18.2121" x2="130.2" y2="18.2121" stroke="white" stroke-width="0.775"/>
+    <line y1="74.0129" x2="130.2" y2="74.0129" stroke="white" stroke-width="0.775"/>
+    <line y1="36.8127" x2="130.2" y2="36.8127" stroke="white" stroke-width="0.775"/>
+    <line y1="55.4123" x2="130.2" y2="55.4123" stroke="white" stroke-width="0.775"/>
+  </mask>
+
+  <g mask="url('#mask0_line_chart')">
+    <rect width="130.2" height="93" fill="url('#paint0_radial_grid')"/>
+  </g>
+
+  <line x1="3.38763e-08" y1="74.0129" x2="130.2" y2="74.0129" stroke="url('#paint1_linear_base')" stroke-width="0.775"/>
+
+  <path class="line-path" d="M111.988 37.1998L93.3878 59.2873L74.7878 20.9248L56.1878 54.6373L37.5878 43.0123L18.9878 73.6248" stroke="#3E7B6B" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/>
+  
+  <circle class="data-point" cx="37.5879" cy="43.0127" r="1.55" fill="#0f172a" stroke="#75A698" stroke-width="1"/>
+  <circle class="data-point" cx="18.9878" cy="73.2373" r="1.55" fill="#0f172a" stroke="#75A698" stroke-width="1"/>
+  <circle class="data-point" cx="56.1875" cy="54.6377" r="1.55" fill="#0f172a" stroke="#75A698" stroke-width="1"/>
+  <circle class="data-point" cx="93.3877" cy="59.2871" r="1.55" fill="#0f172a" stroke="#75A698" stroke-width="1"/>
+  <circle class="data-point" cx="111.988" cy="37.2002" r="1.55" fill="#0f172a" stroke="#75A698" stroke-width="1"/>
+  <circle class="data-point" cx="74.7876" cy="20.9248" r="1.55" fill="#0f172a" stroke="#75A698" stroke-width="1"/>
+
+  <defs>
+    <radialGradient id="paint0_radial_grid" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(65.1 46.5) rotate(90) scale(46.5 65.1)">
+      <stop stop-color="#75A698" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#75A698" stop-opacity="0"/>
+    </radialGradient>
+    
+    <linearGradient id="paint1_linear_base" x1="-4.37114e-08" y1="74.9004" x2="130.2" y2="74.9004" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3E7B6B" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#3E7B6B"/>
+      <stop offset="0.995192" stop-color="#3E7B6B" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+</svg>
