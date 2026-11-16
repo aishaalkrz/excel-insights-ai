@@ -1,8 +1,8 @@
 # Basira AI — Excel Insights
 
-**[Open the frontend preview](https://basira-analytics.netlify.app/)** · **[Browse the application on the development branch](https://github.com/aishaalkrz/excel-insights-ai/tree/Dev)**
+**[Try the live demo](https://basira-analytics.netlify.app/)** · **[Browse the application on the development branch](https://github.com/aishaalkrz/excel-insights-ai/tree/Dev)**
 
-The hosted frontend opens. Online spreadsheet analysis is currently unavailable because the API deployment is offline.
+The live demo supports spreadsheet uploads, calculated metrics, and interactive dashboards. AI-generated summaries are currently unavailable in the hosted demo.
 
 ## Project overview
 
@@ -38,7 +38,7 @@ The table keeps source rows accessible alongside the chart and narrative. Users 
 | Backend | Python and FastAPI for receiving uploads and returning structured results organized by sheet. |
 | Spreadsheet analysis | pandas for column profiling and statistics, with openpyxl for modern Excel workbooks. |
 | AI insights | OpenAI for generating Arabic commentary from computed sheet summaries. The analysis pipeline calculates the dashboard metrics directly from the spreadsheet. |
-| Export and hosting | html-to-image and jsPDF for client-side export. Netlify hosts the frontend preview. |
+| Export and hosting | html-to-image and jsPDF for client-side export. Netlify hosts the frontend, and Vercel hosts the FastAPI backend. |
 
 ## My contribution
 
@@ -46,7 +46,7 @@ I built across the Angular frontend and the FastAPI backend. I worked on the upl
 
 ## Repository guide
 
-The implementation described here is on the [Dev branch](https://github.com/aishaalkrz/excel-insights-ai/tree/Dev).
+The production frontend is built from the [Dev branch](https://github.com/aishaalkrz/excel-insights-ai/tree/Dev). The deployed backend uses the [analysis-validation branch](https://github.com/aishaalkrz/excel-insights-ai/tree/codex/analysis-validation).
 
 - [Angular frontend](https://github.com/aishaalkrz/excel-insights-ai/tree/Dev/excel-insights-ui) — Upload flow, dashboard, D3 charts, reusable UI, and export.
-- [FastAPI backend](https://github.com/aishaalkrz/excel-insights-ai/tree/Dev/excel-insights-api) — File parsing, per-sheet analysis, chart suggestions, and AI insights.
+- [FastAPI backend](https://github.com/aishaalkrz/excel-insights-ai/tree/codex/analysis-validation/excel-insights-api) — File parsing, per-sheet analysis, chart suggestions, and AI insights.
