@@ -1,3 +1,5 @@
+@use '../../../../styles/lib' as ds;
+
 .toast {
   position: fixed;
   top: 26px;
@@ -5,8 +7,8 @@
   transform: translateX(-50%);
   z-index: 999999;
 
-  min-width: 310px;
-  max-width: 360px;
+  width: min(420px, calc(100vw - 24px));
+  min-width: 0;
 
   display: flex;
   align-items: center;
@@ -22,8 +24,8 @@
   line-height: 1.5;
 
   box-shadow:
-    0 14px 35px rgba(15, 23, 42, 0.14),
-    0 4px 12px rgba(15, 23, 42, 0.06);
+    0 14px 35px ds.tint('secondary', 14%),
+    0 4px 12px ds.tint('secondary', 6%);
 
   animation: toastIn 0.32s cubic-bezier(.16, 1, .3, 1);
   overflow: hidden;
@@ -65,7 +67,8 @@
 
 .toast-message {
   flex: 1;
-  white-space: nowrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .toast-close {
@@ -94,76 +97,76 @@
   }
 
   &:hover {
-    background: rgba(15, 23, 42, 0.08);
+    background: ds.tint('secondary', 8%);
   }
 }
 
 /* SUCCESS */
 .success {
-  background: #e8f7ef;
-  border-color: #93d5b8;
-  color: #245847;
+  background: ds.color('success-soft');
+  border-color: ds.color('success');
+  color: ds.color('success');
 
   &::after {
-    background: #3e7b6b;
+    background: ds.color('primary');
   }
 
   .toast-icon {
-    background: #bcebd5;
+    background: ds.color('success-soft');
   }
 
   .toast-icon svg {
-    stroke: #245847;
+    stroke: ds.color('success');
   }
 
   .toast-close {
-    color: #245847;
+    color: ds.color('success');
   }
 }
 
 /* ERROR */
 .error {
-  background: #ffeceb;
-  border-color: #f2a7a0;
-  color: #b7372b;
+  background: ds.color('danger-soft');
+  border-color: ds.color('danger');
+  color: ds.color('danger');
 
   &::after {
-    background: #e74c3c;
+    background: ds.color('danger');
   }
 
   .toast-icon {
-    background: #ffc9c3;
+    background: ds.color('danger-soft');
   }
 
   .toast-icon svg {
-    stroke: #b7372b;
+    stroke: ds.color('danger');
   }
 
   .toast-close {
-    color: #b7372b;
+    color: ds.color('danger');
   }
 }
 
 /* INFO */
 .info {
-  background: #e9f3ff;
-  border-color: #9fc9f5;
-  color: #2563a8;
+  background: ds.color('secondary-light');
+  border-color: ds.color('border-strong');
+  color: ds.color('secondary');
 
   &::after {
-    background: #3b82c4;
+    background: ds.color('secondary');
   }
 
   .toast-icon {
-    background: #cbe4ff;
+    background: ds.color('secondary-light');
   }
 
   .toast-icon svg {
-    stroke: #2563a8;
+    stroke: ds.color('secondary');
   }
 
   .toast-close {
-    color: #2563a8;
+    color: ds.color('secondary');
   }
 }
 

@@ -155,7 +155,9 @@ def generate_chart_suggestions(
             "isAggregated": False,
             "isDerived": False,
             "dataSource": "raw_records",
-            "data": records[:100]
+            "data": records[:100],
+            "sourceRecordCount": len(records),
+            "isSampled": len(records) > 100
         })
 
     if date_columns and numeric_columns:

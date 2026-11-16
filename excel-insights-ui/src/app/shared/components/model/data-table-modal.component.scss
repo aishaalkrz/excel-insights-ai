@@ -1,8 +1,10 @@
+@use '../../../../styles/lib' as ds;
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
   z-index: 9999;
-  background: rgba(15, 23, 42, 0.45);
+  background: ds.tint('secondary', 45%);
   backdrop-filter: blur(5px);
   display: grid;
   place-items: center;
@@ -12,9 +14,9 @@
 .data-modal {
   width: min(100%, 1120px);
   height: min(88vh, 780px);
-  background: var(--surface);
+  background: ds.color('surface');
   border-radius: 24px;
-  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.24);
+  box-shadow: 0 24px 70px ds.tint('secondary', 24%);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -22,14 +24,14 @@
 
 .modal-header {
   padding: 22px 24px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid ds.color('border');
   display: flex;
   align-items: center;
   justify-content: space-between;
 
   h2 {
     margin: 0;
-    color: var(--primary);
+    color: ds.color('secondary');
     font-size: 22px;
     font-weight: 800;
   }
@@ -40,7 +42,7 @@
   height: 45px;
   border: none;
   border-radius: 50%;
-  background: var(--primary-light);
+  background: ds.color('secondary-light');
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -50,14 +52,14 @@
     width: 22px;
     height: 22px;
     fill: none;
-    stroke: var(--primary);
+    stroke: ds.color('primary');
     stroke-width: 2.5;
     stroke-linecap: round;
   }
 
   &:hover {
     transform: scale(1.05);
-    background: rgba(62, 123, 107, 0.12);
+    background: ds.tint('primary', 12%);
   }
 }
 
@@ -71,10 +73,10 @@
   button {
     height: 44px;
     padding: 0 20px;
-    border: 1px solid #dce7e3;
+    border: 1px solid ds.color('border-strong');
     border-radius: 999px;
-    background: #fff;
-    color: var(--text-secondary);
+    background: ds.color('surface');
+    color: ds.color('text-secondary');
     font-family: inherit;
     font-size: 14px;
     font-weight: 800;
@@ -83,13 +85,13 @@
     transition: 0.2s ease;
 
     &:hover {
-      border-color: var(--primary);
+      border-color: ds.color('secondary');
     }
 
     &.active {
-      background: var(--primary);
-      border-color: var(--primary);
-      color: #fff;
+      background: ds.color('primary');
+      border-color: ds.color('secondary');
+      color: ds.color('text-on-primary');
     }
   }
 }
@@ -99,12 +101,12 @@
   display: flex;
   gap: 20px;
   flex-wrap: wrap;
-  color: var(--text-secondary);
+  color: ds.color('text-secondary');
   font-size: 14px;
   font-weight: 700;
 
   strong {
-    color: var(--primary);
+    color: ds.color('secondary');
   }
 }
 
@@ -122,7 +124,7 @@
   th,
   td {
     padding: 16px;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid ds.color('border');
     text-align: right;
     white-space: nowrap;
   }
@@ -131,14 +133,14 @@
     position: sticky;
     top: 0;
     z-index: 2;
-    background: var(--primary-light);
-    color: var(--primary);
+    background: ds.color('secondary-light');
+    color: ds.color('secondary');
     font-size: 15px;
     font-weight: 800;
   }
 
   td {
-    color: var(--text-secondary);
+    color: ds.color('text-secondary');
     font-size: 15px;
     font-weight: 600;
   }
@@ -146,11 +148,12 @@
 
 .modal-footer {
   padding: 11px 20px;
-  border-top: 1px solid var(--border);
-  background: #fff;
+  border-top: 1px solid ds.color('border');
+  background: ds.color('surface');
   display: flex;
   justify-content: flex-start;
-  align-items: flex-start;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
   direction: ltr;
 }
@@ -158,15 +161,15 @@
 .page-btn {
   width: 38px;
   height: 44px;
-  border: 1px solid #dce7e3;
+  border: 1px solid ds.color('border-strong');
   border-radius: 10px;
-  background: #fff;
-  color: var(--primary);
+  background: ds.color('surface');
+  color: ds.color('secondary');
   display: grid;
   place-items: center;
   cursor: pointer;
   transition: 0.2s ease;
-  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.03);
+  box-shadow: 0 4px 10px ds.tint('secondary', 3%);
 
   svg {
     width: 22px;
@@ -179,16 +182,16 @@
   }
 
   &:hover:not(:disabled) {
-    border-color: var(--primary);
-    box-shadow: 0 8px 18px rgba(62, 123, 107, 0.12);
+    border-color: ds.color('secondary');
+    box-shadow: 0 8px 18px ds.tint('primary', 12%);
     transform: translateY(-1px);
   }
 
   &:disabled {
     opacity: 0.45;
     cursor: not-allowed;
-    color: #9aa7a3;
-    background: #fbfdfc;
+    color: ds.color('text-muted');
+    background: ds.color('surface-muted');
     box-shadow: none;
   }
 }
@@ -197,12 +200,12 @@
   min-width: 102px;
   height: 44px;
   padding: 0 18px;
-  border: 1px solid #dce7e3;
+  border: 1px solid ds.color('border-strong');
   border-radius: 10px;
-  background: #fff;
+  background: ds.color('surface');
   display: grid;
   place-items: center;
-  color: #8a9694;
+  color: ds.color('text-secondary');
   font-size: 15px;
   font-weight: 800;
   direction: ltr;
@@ -212,10 +215,10 @@
 .page-btn {
   width: 48px;
   height: 44px;
-  border: 1px solid #dce7e3;
+  border: 1px solid ds.color('border-strong');
   border-radius: 10px;
-  background: #fff;
-  color: var(--primary);
+  background: ds.color('surface');
+  color: ds.color('secondary');
   font-size: 26px;
   font-weight: 800;
   line-height: 1;
@@ -223,27 +226,27 @@
   transition: 0.2s ease;
 
   &:hover:not(:disabled) {
-    border-color: var(--primary);
+    border-color: ds.color('secondary');
     transform: translateY(-1px);
   }
 
   &:disabled {
     opacity: 0.45;
     cursor: not-allowed;
-    color: #9aa7a3;
-    background: #fbfdfc;
+    color: ds.color('text-muted');
+    background: ds.color('surface-muted');
   }
 }
 
 .pagination-range {
   min-width: 150px;
   height: 44px;
-  border: 1px solid #dce7e3;
+  border: 1px solid ds.color('border-strong');
   border-radius: 10px;
-  background: #fff;
+  background: ds.color('surface');
   display: grid;
   place-items: center;
-  color: #7d8b88;
+  color: ds.color('text-secondary');
   font-size: 15px;
   font-weight: 800;
   padding: 0 18px;
@@ -255,7 +258,7 @@
 }
 
 .modal-table-wrapper::-webkit-scrollbar-thumb {
-  background: rgba(62, 123, 107, 0.25);
+  background: ds.tint('primary', 25%);
   border-radius: 999px;
 }
 

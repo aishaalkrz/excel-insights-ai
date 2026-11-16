@@ -1,0 +1,65 @@
+@use 'tokens' as t;
+
+@mixin text($size: 'md', $weight: 'semibold', $line-height: 'normal') {
+  font-size: t.font-size($size);
+  font-weight: t.font-weight($weight);
+  line-height: t.line-height($line-height);
+}
+
+// Headings and labels are structural, so they use slate; green stays for actions.
+@mixin heading($size: 'xl') {
+  @include text($size, 'heavy', 'tight');
+  margin: 0;
+  color: t.color('secondary');
+}
+
+@mixin label {
+  @include text('sm', 'heavy', 'tight');
+  color: t.color('secondary');
+}
+
+@mixin caption {
+  @include text('xs', 'semibold', 'normal');
+  color: t.color('text-secondary');
+}
+
+@mixin body {
+  @include text('md', 'semibold', 'relaxed');
+  color: t.color('text-secondary');
+}
+
+// Isolates numbers from the RTL paragraph so "-5" or "1,200.5" keep their order.
+@mixin numeric {
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-variant-numeric: tabular-nums;
+}
+
+@mixin truncate {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// For values marked `dir="auto"` (e.g. English column names in the RTL UI):
+// the ellipsis lands at the text's own end. Alignment is pinned to the UI's
+// RTL start edge; `start`/`end` would follow each value's own direction.
+@mixin truncate-auto {
+  @include truncate;
+  text-align: right;
+}
+
+@mixin line-clamp($lines) {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: $lines;
+  line-clamp: $lines;
+  overflow: hidden;
+}
+
+// Long unbroken values (column names, identifiers) wrap instead of overflowing.
+@mixin break-long-words {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}

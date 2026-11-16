@@ -1,4 +1,4 @@
-export type ChartType = 'bar' | 'line' | 'pie' | 'dot';
+export type ChartType = 'bar' | 'line' | 'pie' | 'dot' | 'scatter';
 export type ChartScale = 'category' | 'number' | 'time';
 
 export interface ChartConfig {
@@ -7,6 +7,8 @@ export interface ChartConfig {
   title: string;
 
   data: Record<string, unknown>[];
+  sourceRecordCount?: number;
+  isSampled?: boolean;
 
   xKey?: string;
   yKey?: string;

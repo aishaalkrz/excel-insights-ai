@@ -42,13 +42,13 @@
     <button class="primary-btn">تسجيل الدخول</button>
   </div>
 
-  <button class="menu-btn" type="button" (click)="toggleMenu()">
+  <button class="menu-btn" type="button" (click)="toggleMenu()" aria-label="فتح القائمة" [attr.aria-expanded]="isMenuOpen" aria-controls="mobile-navigation">
     <img src="/icons/menu.svg" alt="menu" />
   </button>
 
 </nav>
 
-<div class="mobile-menu" [class.open]="isMenuOpen" (click)="closeMenu()">
+<div id="mobile-navigation" class="mobile-menu" [class.open]="isMenuOpen" [attr.inert]="isMenuOpen ? null : ''" (click)="closeMenu()">
   <div class="mobile-menu-panel" (click)="$event.stopPropagation()">
 
     <div class="mobile-menu-header">
@@ -61,7 +61,7 @@
         </div>
       </div>
 
-      <button class="close-menu" type="button" (click)="closeMenu()">
+      <button class="close-menu" type="button" (click)="closeMenu()" aria-label="إغلاق القائمة">
         <img src="/icons/close.svg" alt="close" />
       </button>
     </div>

@@ -4,6 +4,8 @@ import {
 } from '@angular/core';
 import { DropdownConfig, DropdownOption } from './dropdown.model';
 
+let nextDropdownId = 0;
+
 @Component({
   selector: 'app-dropdown',
   standalone: true,
@@ -16,6 +18,12 @@ export class DropdownComponent<T = string> {
   selectionChange = output<T>();
 
   @ViewChild('dropdownRef') dropdownRef!: ElementRef;
+  @ViewChild('trigger') trigger?: ElementRef<HTMLButtonElement>;
+
+  private readonly id = `app-dropdown-${nextDropdownId++}`;
+  readonly labelId = `${this.id}-label`;
+  readonly valueId = `${this.id}-value`;
+  readonly listboxId = `${this.id}-listbox`;
 
   isOpen = signal(false);
   searchQuery = signal('');
@@ -69,9 +77,15 @@ export class DropdownComponent<T = string> {
   }
 
   selectOption(option: DropdownOption<T>): void {
+    this.close(true);
+    this.selectionChange.emit(option.value);
+  }
+
+  close(restoreFocus = false): void {
+    if (!this.isOpen()) return;
     this.isOpen.set(false);
     this.searchQuery.set('');
-    this.selectionChange.emit(option.value);
+    if (restoreFocus) this.trigger?.nativeElement.focus();
   }
 
   @HostListener('document:click', ['$event'])

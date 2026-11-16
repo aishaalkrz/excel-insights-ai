@@ -1,28 +1,8 @@
+@use './styles/lib' as ds;
 
+// The only place the design tokens are emitted as CSS custom properties.
 :root {
-  --primary: #3E7B6B;
-  --primary-dark: #2D5F52;
-  --primary-light: #EAF4F1;
-
-  --secondary: #4CA785;
-  --secondary-light: rgba(76, 167, 133, 0.57);
-
-  --background: #F7FAF9;
-  --surface: #FFFFFF;
-
-  --text-primary: #1F2D2A;
-  --text-secondary: #667672;
-  --text-muted: #95A39F;
-
-  --border: #E5ECEA;
-
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 18px;
-  --radius-xl: 24px;
-
-  --shadow-card: 0 8px 24px rgba(62, 123, 107, 0.08);
-  --shadow-soft: 0 12px 35px rgba(62, 123, 107, 0.12);
+  @include ds.custom-properties;
 }
 
 * {
@@ -31,9 +11,9 @@
 
 body {
   margin: 0;
-  font-family: 'Cairo', sans-serif;
-  background: var(--background);
-  color: var(--text-primary);
+  font-family: var(--font-family);
+  background: ds.color('background');
+  color: ds.color('text-primary');
   direction: rtl;
 }
 
@@ -51,4 +31,21 @@ button {
 a {
   color: inherit;
   text-decoration: none;
+}
+
+:focus-visible {
+  @include ds.focus-ring;
+}
+
+.visually-hidden {
+  @include ds.visually-hidden;
+}
+
+@include ds.reduced-motion {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
