@@ -8,7 +8,7 @@ import { Observable } from 'rxjs';
 })
 export class ExcelService {
 
-  private prodUrl = 'https://excel-insights-ai-production.up.railway.app';
+  private prodUrl = 'https://basira-api-eta.vercel.app';
   private localUrl = 'http://127.0.0.1:8000';
 
   private apiUrl: string;
