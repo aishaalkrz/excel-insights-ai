@@ -1,0 +1,69 @@
+@use 'tokens' as t;
+@use 'controls' as controls;
+@use 'surfaces' as surfaces;
+@use 'typography' as type;
+
+// Shared by the Home and Features pages; layout stays with each page.
+@mixin feature-card {
+  @include surfaces.card;
+  min-width: 0;
+  text-align: start;
+  transition: transform t.transition('base'), box-shadow t.transition('base');
+
+  &:hover {
+    transform: translateY(-8px);
+    box-shadow: t.shadow('soft');
+  }
+
+  .feature-head {
+    display: flex;
+    align-items: center;
+    gap: t.space(3);
+    margin-bottom: t.space(3);
+  }
+
+  h3 {
+    @include type.heading;
+    flex: 1;
+    @include type.break-long-words;
+  }
+
+  .feature-icon {
+    @include surfaces.icon-badge(40px, 21px);
+    margin-inline-start: auto;
+    transition: transform t.transition('base');
+  }
+
+  &:nth-child(even) .feature-icon {
+    @include surfaces.badge-tone('secondary');
+  }
+
+  &:hover .feature-icon {
+    transform: rotate(-6deg) scale(1.08);
+  }
+
+  p {
+    @include type.body;
+    margin: 0;
+  }
+}
+
+@mixin marketing-page {
+  :host {
+    display: block;
+    background: t.color('background');
+  }
+
+  h1, h2 {
+    color: t.color('secondary');
+    @include type.break-long-words;
+  }
+
+  .primary-btn {
+    @include controls.button-primary;
+  }
+
+  .outline-btn {
+    @include controls.button-secondary;
+  }
+}

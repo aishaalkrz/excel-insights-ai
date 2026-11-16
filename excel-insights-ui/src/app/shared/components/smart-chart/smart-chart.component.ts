@@ -4,12 +4,62 @@ import {
   ElementRef,
   Input,
   OnChanges,
+  OnDestroy,
+  PLATFORM_ID,
   SimpleChanges,
   ViewChild,
+  inject,
 } from '@angular/core';
 import * as d3 from 'd3';
 import { ChartConfig } from '../../models/chart-config.model';
-import { CommonModule } from '@angular/common';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { aggregateCategories, CATEGORY_LIMIT, evenlySample, numericAxis, numericValue, prepareChartPreview } from './chart-preview';
+
+export interface ChartLayout {
+  width: number;
+  height: number;
+  margin: { top: number; right: number; bottom: number; left: number };
+  innerWidth: number;
+  innerHeight: number;
+  rotateX: boolean;
+}
+
+interface LegendItem {
+  label: string;
+  color: string;
+}
+
+interface TooltipRow {
+  label: unknown;
+  value: unknown;
+  color: string;
+}
+
+export interface PreviewSummary {
+  records: number;
+  rendered: number;
+  unit: string;
+  mode: 'full' | 'sampled' | 'reduced';
+  partialSource: boolean;
+  hidden: number;
+}
+
+// Keep these in step with the `.axis` and `.axis-label` font sizes in the SCSS:
+// label space is reserved from estimated text widths so nothing is clipped,
+// including in SSR/tests where text cannot be measured.
+const DEFAULT_WIDTH = 760;
+const MIN_WIDTH = 280;
+const TICK_FONT = 11;
+const TITLE_FONT = 13;
+const CHAR_RATIO = 0.62;
+const TICK_OFFSET = 10;
+const AXIS_TITLE_BAND = 28;
+const X_LABEL_ANGLE = 40;
+const LEGEND_COLLAPSED_LIMIT = 12;
+const LONG_NOTICE_LENGTH = 110;
+// Single-series marks (line, its markers and tooltip swatch) use the brand token.
+const SERIES_COLOR = 'var(--primary)';
+const RTL_TEXT = /[֐-ࣿיִ-﷿ﹰ-﻿]/;
 
 @Component({
   selector: 'app-smart-chart',
@@ -18,19 +68,79 @@ import { CommonModule } from '@angular/common';
   templateUrl: './smart-chart.component.html',
   styleUrl: './smart-chart.component.scss',
 })
-export class SmartChartComponent implements AfterViewInit, OnChanges {
+export class SmartChartComponent implements AfterViewInit, OnChanges, OnDestroy {
   @Input({ required: true }) config!: ChartConfig;
 
   @ViewChild('chartContainer') chartContainer!: ElementRef<HTMLDivElement>;
-  @ViewChild('legendContainer') legendContainer!: ElementRef<HTMLDivElement>;
   @ViewChild('tooltip') tooltip!: ElementRef<HTMLDivElement>;
 
-  private width = 760;
-  private height = 390;
-  private margin = { top: 24, right: 30, bottom: 70, left: 60 };
+  readonly legendCollapsedLimit = LEGEND_COLLAPSED_LIMIT;
+  readonly longNoticeLength = LONG_NOTICE_LENGTH;
+  legendExpanded = false;
+  noticeExpanded = false;
+
+  private layout!: ChartLayout;
+  private renderedWidth = 0;
+  private animate = true;
+  private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
+  private resizeObserver?: ResizeObserver;
+  private resizeFrame = 0;
 
   private hiddenCategories = new Set<string>();
   private colorScale!: d3.ScaleOrdinal<string, string>;
+  private previewConfig?: ChartConfig;
+  private preview?: ReturnType<typeof prepareChartPreview>;
+  private legendPreview?: ReturnType<typeof prepareChartPreview>;
+  private legend: LegendItem[] = [];
+
+  // The title is presentation only: a title edit must not re-aggregate the
+  // data, replay animations, or reset legend toggles.
+  private getPreview() {
+    if (!this.preview || !sameChartData(this.previewConfig, this.config)) {
+      this.previewConfig = this.config;
+      this.preview = prepareChartPreview(this.config ?? { type: 'bar', title: '', data: [] });
+    }
+    return this.preview;
+  }
+
+  get previewNotice(): string {
+    const preview = this.getPreview();
+    return preview.notice + (this.hiddenCategories.size ? ` المعروض حالياً بعد إخفاء الفئات: ${this.visibleCount()}.` : '');
+  }
+
+  get previewSummary(): PreviewSummary {
+    const preview = this.getPreview();
+    const type = this.config?.type;
+    const pointBased = type === 'scatter' || type === 'line';
+    const mode = type === 'scatter' && preview.data.length < preview.validCount ? 'sampled'
+      : type === 'line' && preview.data.length < preview.domainData.length ? 'reduced'
+      : 'full';
+    return {
+      records: preview.validCount,
+      rendered: this.visibleCount(),
+      unit: pointBased ? 'نقطة' : 'فئة',
+      mode,
+      partialSource: !!this.config?.isSampled,
+      hidden: this.hiddenCategories.size,
+    };
+  }
+
+  get legendItems(): LegendItem[] {
+    return this.getLegend();
+  }
+
+  isCategoryHidden(label: string): boolean {
+    return this.hiddenCategories.has(label);
+  }
+
+  toggleCategory(label: string): void {
+    if (this.hiddenCategories.has(label)) {
+      this.hiddenCategories.delete(label);
+    } else {
+      this.hiddenCategories.add(label);
+    }
+    this.renderChart();
+  }
 
   private colors = [
     '#10B981', '#059669', '#34D399', '#047857', '#6EE7B7',
@@ -42,19 +152,74 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
 
   ngAfterViewInit(): void {
     this.renderChart();
-  }
 
-  ngOnChanges(changes: SimpleChanges): void {
-    if (changes['config'] && this.chartContainer) {
-      if (!changes['config'].firstChange) {
-        this.hiddenCategories.clear();
-      }
-      this.renderChart();
+    if (this.isBrowser && typeof ResizeObserver !== 'undefined') {
+      this.resizeObserver = new ResizeObserver(() => this.scheduleResize());
+      this.resizeObserver.observe(this.chartContainer.nativeElement);
     }
   }
 
-  private setupColorScale(fullData: any[], catKey: string) {
-    const uniqueCategories = Array.from(new Set(fullData.map(d => String(d[catKey]))));
+  ngOnChanges(changes: SimpleChanges): void {
+    const change = changes['config'];
+    if (!change || !this.chartContainer) return;
+    if (!change.firstChange && sameChartData(change.previousValue, change.currentValue)) return;
+
+    if (!change.firstChange) {
+      this.hiddenCategories.clear();
+      this.legendExpanded = false;
+      this.noticeExpanded = false;
+    }
+    this.renderChart();
+  }
+
+  ngOnDestroy(): void {
+    this.resizeObserver?.disconnect();
+    if (this.resizeFrame) cancelAnimationFrame(this.resizeFrame);
+  }
+
+  // Re-render at the container's real width so text stays at its CSS size
+  // instead of being scaled down with the whole SVG on narrow screens.
+  private scheduleResize(): void {
+    if (this.resizeFrame) return;
+    this.resizeFrame = requestAnimationFrame(() => {
+      this.resizeFrame = 0;
+      if (Math.abs(this.measureWidth() - this.renderedWidth) >= 1) this.renderChart(false);
+    });
+  }
+
+  private measureWidth(): number {
+    const width = Math.floor(this.chartContainer?.nativeElement.clientWidth ?? 0);
+    return width > 0 ? Math.max(MIN_WIDTH, width) : DEFAULT_WIDTH;
+  }
+
+  private categoriesOf(data: Record<string, unknown>[]): string[] {
+    const key = this.categoryKey();
+    return Array.from(new Set(data.map(d => String(d[key]))));
+  }
+
+  private categoryKey(): string {
+    return String(this.config?.type === 'pie' ? (this.config.categoryKey || this.config.xKey) : this.config?.xKey);
+  }
+
+  private visibleCount(): number {
+    const key = this.categoryKey();
+    return this.getPreview().data.filter(row => !this.hiddenCategories.has(String(row[key]))).length;
+  }
+
+  private getLegend(): LegendItem[] {
+    const preview = this.getPreview();
+    if (this.legendPreview !== preview) {
+      this.legendPreview = preview;
+      const categories = this.categoriesOf(preview.data);
+      this.setupColorScale(categories);
+      this.legend = this.config?.showLegend && categories.length <= CATEGORY_LIMIT
+        ? categories.map(label => ({ label, color: this.colorScale(label) }))
+        : [];
+    }
+    return this.legend;
+  }
+
+  private setupColorScale(uniqueCategories: string[]) {
     const step = Math.max(1, Math.floor(this.colors.length / uniqueCategories.length));
     const distributedColors = uniqueCategories.map((_, i) => this.colors[(i * step) % this.colors.length]);
 
@@ -63,29 +228,23 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
       .range(distributedColors);
   }
 
-  private renderChart(): void {
-    if (!this.config?.data?.length) return;
-
+  private renderChart(animate = true): void {
+    this.animate = animate;
     d3.select(this.chartContainer.nativeElement).selectAll('*').remove();
-    if (this.legendContainer) {
-      d3.select(this.legendContainer.nativeElement).selectAll('*').remove();
-    }
 
-    const fullData = this.config.data;
-    
-    const catKey = String(this.config.type === 'pie' ? (this.config.categoryKey || this.config.xKey) : this.config.xKey);
+    this.hideTooltip();
+    this.renderedWidth = this.measureWidth();
+    const fullData = this.getPlottableData();
+    if (!fullData.length) return;
+
+    const catKey = this.categoryKey();
     const valKey = String(this.config.type === 'pie' ? (this.config.valueKey || this.config.yKey) : this.config.yKey);
 
     if (!catKey || !valKey) return;
 
-    this.setupColorScale(fullData, catKey);
-    this.renderInteractiveLegend(fullData, catKey);
+    this.getLegend();
 
     let chartData = fullData.filter(d => !this.hiddenCategories.has(String(d[catKey])));
-
-    if (['bar', 'line', 'pie','dot'].includes(this.config.type)) {
-      chartData = this.aggregateByCategory(chartData, catKey, valKey);
-    }
 
     if (!chartData.length) return;
 
@@ -102,183 +261,389 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
       case 'dot':
         this.renderDotChart(chartData, catKey, valKey);
         break;
+      case 'scatter':
+        this.renderScatterChart(chartData, catKey, valKey);
+        break;
     }
   }
 
-  private renderInteractiveLegend(fullData: any[], catKey: string): void {
-    if (!this.legendContainer || !this.config.showLegend) return;
-
-    const uniqueCategories = Array.from(new Set(fullData.map(d => String(d[catKey]))));
-    const legend = d3.select(this.legendContainer.nativeElement);
-
-    const items = legend.selectAll('.legend-item')
-      .data(uniqueCategories)
-      .enter()
-      .append('div')
-      .attr('class', d => `legend-item ${this.hiddenCategories.has(d) ? 'hidden-item' : ''}`)
-      .on('click', (event, d) => {
-         if (this.hiddenCategories.has(d)) {
-            this.hiddenCategories.delete(d);
-         } else {
-            this.hiddenCategories.add(d);
-         }
-         this.renderChart();
-      });
-
-      items.append('span')
-      .style('--item-color', d => this.colorScale(d));
-
-      items.append('small')
-      .text(d => d);
+  get hasPlottableData(): boolean {
+    return this.visibleCount() > 0;
   }
 
-  private createSvg() {
-    return d3
-      .select(this.chartContainer.nativeElement)
-      .append('svg')
-      .attr('viewBox', `0 0 ${this.width} 450`)
-      .attr('preserveAspectRatio', 'xMidYMid meet');
+  private getPlottableData(): Record<string, unknown>[] {
+    return this.getPreview().data;
   }
 
-  private getInnerSize() {
+  private frame() {
+    const width = this.renderedWidth || this.measureWidth();
+    const innerHeight = width < 480 ? 220 : width < 720 ? 260 : 296;
+    return { width, innerHeight };
+  }
+
+  private maxTickChars(width: number): number {
+    return width < 480 ? 12 : 18;
+  }
+
+  // Reserves margins for tick labels, axis titles, and the overhang of the
+  // first/last category label so the viewBox contains every piece of text.
+  private computeLayout(
+    yLabels: string[],
+    x: { labels: string[]; count: number; edge: boolean } | null,
+  ): ChartLayout {
+    const { width, innerHeight } = this.frame();
+    const margin = { top: 24, right: 30, bottom: 0, left: 60 };
+    const yTitleBand = this.config.yAxisLabel ? AXIS_TITLE_BAND : 8;
+    margin.left = Math.max(margin.left, Math.ceil(yTitleBand + textWidth(yLabels, TICK_FONT) + TICK_OFFSET + 4));
+
+    let rotateX = false;
+    let tickBand = TICK_FONT + TICK_OFFSET + 8;
+    if (x && x.labels.length) {
+      const widest = textWidth(x.labels, TICK_FONT);
+      const step = (width - margin.left - margin.right) / Math.max(1, x.count);
+      rotateX = !x.edge && widest + 8 > step;
+
+      if (rotateX) {
+        const angle = (X_LABEL_ANGLE * Math.PI) / 180;
+        tickBand = Math.ceil(widest * Math.sin(angle) + TICK_FONT * Math.cos(angle) + TICK_OFFSET + 6);
+        margin.left = Math.max(margin.left, Math.ceil(widest * Math.cos(angle) - step / 2 + 8));
+      } else {
+        const overhang = Math.ceil(widest / 2 - (x.edge ? 0 : step / 2) + 4);
+        margin.left = Math.max(margin.left, overhang);
+        margin.right = Math.max(margin.right, overhang);
+      }
+    }
+
+    margin.bottom = tickBand + (this.config.xAxisLabel ? AXIS_TITLE_BAND : 8);
+    const innerWidth = Math.max(40, width - margin.left - margin.right);
     return {
-      innerWidth: this.width - this.margin.left - this.margin.right,
-      innerHeight: this.height - this.margin.top - this.margin.bottom,
+      width,
+      height: margin.top + innerHeight + margin.bottom,
+      margin,
+      innerWidth,
+      innerHeight,
+      rotateX,
     };
   }
 
-  private getValue(d: Record<string, unknown>, key: string): number {
-    const value = Number(d[key]);
-    return Number.isFinite(value) ? value : 0;
+  private createSvg() {
+    const { width, height } = this.layout;
+    return d3
+      .select(this.chartContainer.nativeElement)
+      .append('svg')
+      .attr('viewBox', `0 0 ${width} ${height}`)
+      .attr('preserveAspectRatio', 'xMidYMid meet')
+      .attr('direction', 'ltr')
+      .attr('role', 'img')
+      .attr('aria-label', this.config.title || `${this.config.yAxisLabel ?? ''} ${this.config.xAxisLabel ?? ''}`.trim());
   }
 
-  private formatTooltip(label: unknown, value: unknown, color: string): string {
-    const formattedValue = typeof value === 'number' 
-      ? value.toLocaleString('en-US') 
-      : value;
-      
-    return `<strong style="color: ${color};"> <span> :</span> ${label}</strong> <span>${formattedValue}</span>`;
+  private getInnerSize() {
+    return { innerWidth: this.layout.innerWidth, innerHeight: this.layout.innerHeight };
+  }
+
+  private plotGroup(svg: d3.Selection<SVGSVGElement, unknown, null, undefined>) {
+    return svg.append('g').attr('transform', `translate(${this.layout.margin.left},${this.layout.margin.top})`);
+  }
+
+  private getValue(d: Record<string, unknown>, key: string): number | null {
+    return numericValue(d, key);
+  }
+
+  private categoryLayout(data: Record<string, unknown>[], catKey: string, yAxis: ReturnType<typeof numericAxis>) {
+    const domain = data.map(d => String(d[catKey]));
+    const maxChars = this.maxTickChars(this.frame().width);
+    const labels = (domain.length > CATEGORY_LIMIT ? evenlySample(domain, 12) : domain).map(label => truncate(label, maxChars));
+    this.layout = this.computeLayout(yAxis.ticks.map(tick => String(yAxis.format(tick))), {
+      labels, count: domain.length, edge: false,
+    });
+    return domain;
   }
 
   private renderBarChart(data: any[], catKey: string, valKey: string): void {
+    const yProbe = numericAxis(this.getPreview().domainData, valKey, [this.frame().innerHeight, 0], true);
+    const domain = this.categoryLayout(data, catKey, yProbe);
     const svg = this.createSvg();
     const { innerWidth, innerHeight } = this.getInnerSize();
 
-    const chart = svg.append('g').attr('transform', `translate(${this.margin.left},${this.margin.top})`);
-    const x = d3.scaleBand().domain(data.map((d) => String(d[catKey]))).range([0, innerWidth]).padding(0.32);
-    const y = d3.scaleLinear().domain([0, d3.max(data, (d) => this.getValue(d, valKey)) || 0]).nice().range([innerHeight, 0]);
+    const chart = this.plotGroup(svg);
+    const x = d3.scaleBand().domain(domain).range([0, innerWidth]).padding(0.32);
+    const yAxis = numericAxis(this.getPreview().domainData, valKey, [innerHeight, 0], true);
+    const y = yAxis.project;
 
-    this.drawGrid(chart, x as any, y, innerWidth, innerHeight);
-    this.drawAxes(chart, x as any, y, innerHeight);
+    this.drawGrid(chart, x as any, yAxis.scale, innerWidth, innerHeight, yAxis.ticks);
+    this.drawAxes(chart, x as any, yAxis.scale, innerHeight, yAxis);
     this.drawAxisLabels(svg);
 
-    chart.selectAll('.bar')
+    const radius = Math.min(8, x.bandwidth() / 3);
+    const bars = chart.selectAll('.bar')
       .data(data)
       .enter()
       .append('rect')
       .attr('class', 'bar')
       .attr('x', (d) => x(String(d[catKey])) ?? 0)
-      .attr('y', innerHeight)
       .attr('width', x.bandwidth())
-      .attr('height', 0)
-      .attr('rx', 8)
+      .attr('rx', radius)
       .attr('fill', (d) => this.colorScale(String(d[catKey])))
       .on('mousemove', (event, d) =>
-        this.showTooltip(event, this.formatTooltip(d[catKey], d[valKey], this.colorScale(String(d[catKey]))))
+        this.showTooltip(event, [{ label: d[catKey], value: d[valKey], color: this.colorScale(String(d[catKey])) }])
       )
-      .on('mouseleave', () => this.hideTooltip())
-      .transition().duration(700)
-      .attr('y', (d) => y(this.getValue(d, valKey)))
-      .attr('height', (d) => innerHeight - y(this.getValue(d, valKey)));
+      .on('mouseleave', () => this.hideTooltip());
+
+    const finalY = (d: any) => y(Math.max(0, this.getValue(d, valKey)!));
+    const finalHeight = (d: any) => Math.abs(y(0) - y(this.getValue(d, valKey)!));
+    if (this.animate) {
+      bars.attr('y', y(0)).attr('height', 0)
+        .transition().duration(700)
+        .attr('y', finalY)
+        .attr('height', finalHeight);
+    } else {
+      bars.attr('y', finalY).attr('height', finalHeight);
+    }
   }
 
+  // Dates and numbers sit on continuous axes so gaps and distances are true to
+  // the data; text categories keep evenly spaced points. Dense lines drop the
+  // per-point markers and use a hover overlay that snaps to the nearest point.
   private renderLineChart(data: any[], catKey: string, valKey: string): void {
-    const svg = this.createSvg();
-    const { innerWidth, innerHeight } = this.getInnerSize();
+    const domainData = this.getPreview().domainData;
+    const continuous = this.config.xScale === 'time' || this.config.xScale === 'number';
+    const yProbe = numericAxis(domainData, valKey, [this.frame().innerHeight, 0], true);
+    const yLabels = yProbe.ticks.map(tick => String(yProbe.format(tick)));
 
-    const chart = svg.append('g').attr('transform', `translate(${this.margin.left},${this.margin.top})`);
-    const x = d3.scalePoint().domain(data.map((d: any) => String(d[catKey]))).range([0, innerWidth]).padding(0.5);
-    const y = d3.scaleLinear().domain([0, d3.max(data, (d) => this.getValue(d, valKey)) || 0]).nice().range([innerHeight, 0]);
+    let px: (d: Record<string, unknown>) => number;
+    let chart: d3.Selection<SVGGElement, unknown, null, undefined>;
+    let svg: d3.Selection<SVGSVGElement, unknown, null, undefined>;
+    let yAxis: ReturnType<typeof numericAxis>;
 
-    this.drawGrid(chart, x as any, y, innerWidth, innerHeight);
-    this.drawAxes(chart, x as any, y, innerHeight);
+    if (continuous) {
+      const x = this.continuousX(data, catKey);
+      const tickCount = (width: number) => Math.max(2, Math.floor(width / 90));
+      const probeWidth = this.frame().width - 90;
+      const probeTicks = x.ticks(x.scale(probeWidth), tickCount(probeWidth));
+      this.layout = this.computeLayout(yLabels, { labels: probeTicks.map(x.format), count: probeTicks.length, edge: true });
+      svg = this.createSvg();
+      const { innerWidth, innerHeight } = this.getInnerSize();
+      chart = this.plotGroup(svg);
+      const scale = x.scale(innerWidth);
+      const ticks = x.ticks(scale, tickCount(innerWidth));
+      yAxis = numericAxis(domainData, valKey, [innerHeight, 0], true);
+      px = d => scale(x.value(d));
+
+      this.drawGrid(chart, scale, yAxis.scale, innerWidth, innerHeight, yAxis.ticks, ticks);
+      chart.append('g').attr('class', 'axis axis-x').attr('transform', `translate(0,${innerHeight})`)
+        .call(d3.axisBottom(scale as d3.AxisScale<number>).tickValues(ticks).tickSizeOuter(0).tickFormat(x.format));
+      this.drawYAxis(chart, yAxis);
+    } else {
+      const domain = this.categoryLayout(data, catKey, yProbe);
+      svg = this.createSvg();
+      const { innerWidth, innerHeight } = this.getInnerSize();
+      chart = this.plotGroup(svg);
+      const x = d3.scalePoint().domain(domain).range([0, innerWidth]).padding(0.5);
+      yAxis = numericAxis(domainData, valKey, [innerHeight, 0], true);
+      px = d => x(String(d[catKey])) ?? 0;
+
+      this.drawGrid(chart, x as any, yAxis.scale, innerWidth, innerHeight, yAxis.ticks);
+      this.drawAxes(chart, x as any, yAxis.scale, innerHeight, yAxis);
+    }
     this.drawAxisLabels(svg);
 
-    const line = d3.line<Record<string, unknown>>()
-      .x((d) => x(String(d[catKey])) ?? 0)
-      .y((d) => y(this.getValue(d, valKey)))
-      .curve(d3.curveLinear);
+    const { innerWidth, innerHeight } = this.getInnerSize();
+    const py = (d: Record<string, unknown>) => yAxis.project(this.getValue(d, valKey)!);
+    const line = d3.line<Record<string, unknown>>().x(px).y(py).curve(d3.curveLinear);
 
     const path = chart.append('path')
       .datum(data)
       .attr('class', 'line-path')
       .attr('d', line)
       .attr('fill', 'none')
-      .attr('stroke', '#3E7B6B')
-      .attr('stroke-width', 4)
+      .attr('stroke-width', 3)
       .attr('stroke-linecap', 'round')
       .attr('stroke-linejoin', 'round');
 
-    const totalLength = (path.node() as SVGPathElement).getTotalLength();
+    if (this.animate) {
+      const totalLength = (path.node() as SVGPathElement).getTotalLength();
 
-    path.attr('stroke-dasharray', `${totalLength} ${totalLength}`)
-      .attr('stroke-dashoffset', totalLength)
-      .transition().duration(850).attr('stroke-dashoffset', 0);
-      
-    chart.selectAll('.line-dot')
-      .data(data)
-      .enter().append('circle')
-      .attr('cx', d => x(String(d[catKey])) ?? 0)
-      .attr('cy', d => y(this.getValue(d, valKey)))
+      path.attr('stroke-dasharray', `${totalLength} ${totalLength}`)
+        .attr('stroke-dashoffset', totalLength)
+        .transition().duration(850).attr('stroke-dashoffset', 0);
+    }
+
+    // Category colours only mean something while the legend explains them.
+    const byCategory = this.getLegend().length > 0;
+    const colorOf = (d: Record<string, unknown>) => byCategory ? this.colorScale(String(d[catKey])) : null;
+    const tooltipFor = (d: Record<string, unknown>) =>
+      [{ label: d[catKey], value: d[valKey], color: colorOf(d) ?? SERIES_COLOR }];
+    const dense = data.length > Math.max(12, innerWidth / 14);
+
+    if (!dense) {
+      chart.selectAll('.line-dot')
+        .data(data)
+        .enter().append('circle')
+        .attr('class', byCategory ? 'line-dot' : 'line-dot line-dot--series')
+        .attr('cx', px)
+        .attr('cy', py)
+        .attr('r', 5)
+        .attr('fill', d => colorOf(d))
+        .attr('stroke', '#fff')
+        .attr('stroke-width', 2)
+        .on('mousemove', (event, d) => this.showTooltip(event, tooltipFor(d)))
+        .on('mouseleave', () => this.hideTooltip());
+      return;
+    }
+
+    const focus = chart.append('circle')
+      .attr('class', 'line-focus')
       .attr('r', 5)
-      .attr('fill', d => this.colorScale(String(d[catKey])))
       .attr('stroke', '#fff')
       .attr('stroke-width', 2)
-      .on('mousemove', (event, d) => 
-        this.showTooltip(event, this.formatTooltip(d[catKey], d[valKey], this.colorScale(String(d[catKey]))))
-      )
-      .on('mouseleave', () => this.hideTooltip());
+      .style('display', 'none');
+    const xs = data.map(px);
+    const nearest = d3.bisector((value: number) => value).center;
+    chart.append('rect')
+      .attr('class', 'line-overlay')
+      .attr('width', innerWidth)
+      .attr('height', innerHeight)
+      .attr('fill', 'transparent')
+      .on('mousemove', (event: MouseEvent) => {
+        const d = data[nearest(xs, d3.pointer(event)[0])];
+        if (!d) return;
+        focus.style('display', null).attr('cx', px(d)).attr('cy', py(d)).style('fill', colorOf(d) ?? SERIES_COLOR);
+        this.showTooltip(event, tooltipFor(d));
+      })
+      .on('mouseleave', () => {
+        focus.style('display', 'none');
+        this.hideTooltip();
+      });
+  }
+
+  // Continuous X for line charts: UTC time for dates, the shared numeric axis
+  // (with its overflow-safe scaling) for numbers.
+  private continuousX(data: Record<string, unknown>[], key: string) {
+    if (this.config.xScale === 'time') {
+      const times = data.map(d => Date.parse(String(d[key])));
+      let [start, end] = d3.extent(times) as [number, number];
+      if (start === end) {
+        start -= 43_200_000;
+        end += 43_200_000;
+      }
+      const day = 86_400_000;
+      const format = d3.utcFormat(end - start > 3 * 365 * day ? '%Y' : end - start > 90 * day ? '%Y-%m' : '%Y-%m-%d');
+      return {
+        value: (d: Record<string, unknown>) => Date.parse(String(d[key])),
+        scale: (width: number) => d3.scaleUtc().domain([start, end]).range([0, width]) as unknown as d3.ScaleLinear<number, number>,
+        ticks: (scale: d3.ScaleLinear<number, number>, count: number) => {
+          const ticks = scale.ticks(count).map(Number);
+          return ticks.length > count + 2 ? evenlySample(ticks, count) : ticks;
+        },
+        format: (value: d3.NumberValue) => format(new Date(Number(value))),
+      };
+    }
+    const axis = numericAxis(data, key, [0, 1]);
+    return {
+      value: (d: Record<string, unknown>) => this.getValue(d, key)! / axis.factor,
+      scale: (width: number) => axis.scale.copy().range([0, width]),
+      ticks: (_scale: d3.ScaleLinear<number, number>, _count: number) => axis.ticks,
+      format: (value: d3.NumberValue) => String(axis.format(value)),
+    };
   }
 
   private renderDotChart(data: any[], catKey: string, valKey: string): void {
+    const yProbe = numericAxis(this.getPreview().domainData, valKey, [this.frame().innerHeight, 0], true);
+    const domain = this.categoryLayout(data, catKey, yProbe);
     const svg = this.createSvg();
     const { innerWidth, innerHeight } = this.getInnerSize();
 
-    const chart = svg.append('g').attr('transform', `translate(${this.margin.left},${this.margin.top})`);
-    const x = d3.scalePoint().domain(data.map((d: any) => String(d[catKey]))).range([0, innerWidth]).padding(0.5);
-    const y = d3.scaleLinear().domain([0, d3.max(data, (d) => this.getValue(d, valKey)) || 0]).nice().range([innerHeight, 0]);
+    const chart = this.plotGroup(svg);
+    const x = d3.scalePoint().domain(domain).range([0, innerWidth]).padding(0.5);
+    const yAxis = numericAxis(this.getPreview().domainData, valKey, [innerHeight, 0], true);
+    const y = yAxis.project;
 
-    this.drawGrid(chart, x as any, y, innerWidth, innerHeight);
-    this.drawAxes(chart, x as any, y, innerHeight);
+    this.drawGrid(chart, x as any, yAxis.scale, innerWidth, innerHeight, yAxis.ticks);
+    this.drawAxes(chart, x as any, yAxis.scale, innerHeight, yAxis);
     this.drawAxisLabels(svg);
 
-    chart.selectAll('.scatter-dot')
+    const dots = chart.selectAll('.scatter-dot')
       .data(data)
       .enter().append('circle')
       .attr('class', 'scatter-dot')
       .attr('cx', (d) => x(String(d[catKey])) ?? 0)
-      .attr('cy', (d) => y(this.getValue(d, valKey)))
-      .attr('r', 0)
+      .attr('cy', (d) => y(this.getValue(d, valKey)!))
       .attr('fill', (d) => this.colorScale(String(d[catKey])))
       .attr('stroke', '#fff')
       .attr('stroke-width', 2)
       .on('mousemove', (event, d) =>
-        this.showTooltip(event, this.formatTooltip(d[catKey], d[valKey], this.colorScale(String(d[catKey]))))
+        this.showTooltip(event, [{ label: d[catKey], value: d[valKey], color: this.colorScale(String(d[catKey])) }])
       )
-      .on('mouseleave', () => this.hideTooltip())
-      .transition().delay((_, i) => i * 40).duration(400)
-      .attr('r', 7);
+      .on('mouseleave', () => this.hideTooltip());
+
+    if (this.animate) {
+      dots.attr('r', 0).transition().delay((_, i) => i * 40).duration(400).attr('r', 7);
+    } else {
+      dots.attr('r', 7);
+    }
+  }
+
+  private renderScatterChart(data: Record<string, unknown>[], xKey: string, yKey: string): void {
+    const domainData = this.getPreview().domainData;
+    const { innerHeight: plotHeight } = this.frame();
+    const xProbe = numericAxis(domainData, xKey, [0, 1]);
+    const yProbe = numericAxis(domainData, yKey, [plotHeight, 0]);
+    const xLabels = xProbe.ticks.map(tick => String(xProbe.format(tick)));
+    this.layout = this.computeLayout(yProbe.ticks.map(tick => String(yProbe.format(tick))), {
+      labels: xLabels, count: Math.max(1, xLabels.length - 1), edge: true,
+    });
+
+    const svg = this.createSvg();
+    const { innerWidth, innerHeight } = this.getInnerSize();
+    const chart = this.plotGroup(svg);
+    const x = numericAxis(domainData, xKey, [0, innerWidth]);
+    const y = numericAxis(domainData, yKey, [innerHeight, 0]);
+
+    this.drawGrid(chart, x.scale, y.scale, innerWidth, innerHeight, y.ticks);
+    chart.append('g').attr('class', 'axis axis-x')
+      .attr('transform', `translate(0,${innerHeight})`)
+      .call(d3.axisBottom(x.scale).tickValues(x.ticks).tickSizeOuter(0).tickFormat(x.format));
+    chart.append('g').attr('class', 'axis axis-y')
+      .call(d3.axisLeft(y.scale).tickValues(y.ticks).tickSizeOuter(0).tickFormat(y.format));
+    this.drawAxisLabels(svg);
+
+    chart.selectAll('.scatter-point')
+      .data(data)
+      .enter().append('circle')
+      .attr('class', 'scatter-dot scatter-point')
+      .attr('cx', row => x.scale(this.getValue(row, xKey)! / x.factor))
+      .attr('cy', row => y.scale(this.getValue(row, yKey)! / y.factor))
+      .attr('r', 6)
+      .attr('fill', row => this.colorScale(String(row[xKey])))
+      .attr('stroke', '#fff')
+      .attr('stroke-width', 2)
+      .on('mousemove', (event, row) => {
+        const color = this.colorScale(String(row[xKey]));
+        this.showTooltip(event, [
+          { label: xKey, value: this.getValue(row, xKey), color },
+          { label: yKey, value: this.getValue(row, yKey), color },
+        ]);
+      })
+      .on('mouseleave', () => this.hideTooltip());
   }
 
   private renderPieChart(data: any[], catKey: string, valKey: string): void {
+    const { width, innerHeight } = this.frame();
+    const margin = { top: 16, right: 16, bottom: 16, left: 16 };
+    this.layout = {
+      width, height: innerHeight + margin.top + margin.bottom, margin,
+      innerWidth: width - margin.left - margin.right, innerHeight, rotateX: false,
+    };
     const svg = this.createSvg();
-    const radius = Math.min(this.width, this.height) / 2 - 40;
+    const radius = Math.min(this.layout.innerWidth, innerHeight) / 2 - 8;
 
-    const chart = svg.append('g').attr('transform', `translate(${this.width / 2},${this.height / 2})`);
-    const pie = d3.pie<Record<string, unknown>>().sort(null).value((d) => this.getValue(d, valKey));
+    const chart = svg.append('g').attr('transform', `translate(${width / 2},${margin.top + innerHeight / 2})`);
+    const magnitude = d3.max(data, row => Math.abs(this.getValue(row, valKey)!)) || 1;
+    const pie = d3.pie<Record<string, unknown>>().sort(null).value((d) => this.getValue(d, valKey)! / magnitude);
     const arc = d3.arc<d3.PieArcDatum<Record<string, unknown>>>().innerRadius(0).outerRadius(radius);
 
-    chart.selectAll('path')
+    const slices = chart.selectAll('path')
       .data(pie(data))
       .enter()
       .append('path')
@@ -286,72 +651,150 @@ export class SmartChartComponent implements AfterViewInit, OnChanges {
       .attr('stroke', '#fff')
       .attr('stroke-width', 3)
       .on('mousemove', (event, d) =>
-        this.showTooltip(event, this.formatTooltip(d.data[catKey], d.data[valKey], this.colorScale(String(d.data[catKey]))))
+        this.showTooltip(event, [{ label: d.data[catKey], value: d.data[valKey], color: this.colorScale(String(d.data[catKey])) }])
       )
-      .on('mouseleave', () => this.hideTooltip())
-      .transition().duration(650)
-      .attrTween('d', (d) => {
-        const interpolate = d3.interpolate({ startAngle: 0, endAngle: 0 }, d);
-        return (t) => arc(interpolate(t)) || '';
-      });
+      .on('mouseleave', () => this.hideTooltip());
+
+    if (this.animate) {
+      slices.transition().duration(650)
+        .attrTween('d', (d) => {
+          const interpolate = d3.interpolate({ startAngle: 0, endAngle: 0 }, d);
+          return (t) => arc(interpolate(t)) || '';
+        });
+    } else {
+      slices.attr('d', d => arc(d) || '');
+    }
   }
 
-  private drawGrid(chart: any, x: any, y: any, innerWidth: number, innerHeight: number): void {
-    chart.append('g').attr('class', 'grid grid-y').call(d3.axisLeft(y).ticks(5).tickSize(-innerWidth).tickFormat(() => ''));
-    chart.append('g').attr('class', 'grid grid-x').attr('transform', `translate(0,${innerHeight})`).call(d3.axisBottom(x).tickSize(-innerHeight).tickFormat(() => ''));
+  private drawGrid(chart: any, x: any, y: any, innerWidth: number, innerHeight: number, yTicks?: number[], xTicks?: number[]): void {
+    const yGrid = d3.axisLeft(y).tickSize(-innerWidth).tickFormat(() => '');
+    if (yTicks) yGrid.tickValues(yTicks); else yGrid.ticks(5);
+    chart.append('g').attr('class', 'grid grid-y').call(yGrid);
+    const xGrid = d3.axisBottom(x).tickSize(-innerHeight).tickFormat(() => '');
+    if (xTicks) xGrid.tickValues(xTicks);
+    else if (typeof x.bandwidth === 'function' || typeof x.step === 'function') xGrid.tickValues(this.categoryTicks(x.domain()));
+    chart.append('g').attr('class', 'grid grid-x').attr('transform', `translate(0,${innerHeight})`).call(xGrid);
   }
 
-  private drawAxes(chart: any, x: any, y: any, innerHeight: number): void {
-    chart.append('g').attr('class', 'axis axis-x').attr('transform', `translate(0,${innerHeight})`).call(d3.axisBottom(x).tickSizeOuter(0)).selectAll('text')
-    .attr('transform', 'translate(-30, 20) rotate(-29)').attr('text-anchor', 'end').attr('dx', '-0.45em').attr('dy', '0.75em').attr('font-size','8px');
+  // Category labels are sampled when there are too many to read, then thinned
+  // further when rotated labels would collide at the current width.
+  private categoryTicks(domain: string[]): string[] {
+    let values = domain.length > CATEGORY_LIMIT ? evenlySample(domain, 12) : domain;
+    if (this.layout.rotateX) {
+      const fit = Math.max(2, Math.floor(this.layout.innerWidth / (TICK_FONT * 1.6)));
+      if (values.length > fit) values = evenlySample(values, fit);
+    }
+    return values;
+  }
+
+  private drawAxes(chart: any, x: any, y: any, innerHeight: number, numericY: ReturnType<typeof numericAxis>): void {
+    const maxChars = this.maxTickChars(this.layout.width);
+    const xAxis = d3.axisBottom(x).tickSizeOuter(0)
+      .tickValues(this.categoryTicks(x.domain()))
+      .tickFormat(value => isolate(truncate(String(value), maxChars)));
+    const labels = chart.append('g').attr('class', 'axis axis-x').attr('transform', `translate(0,${innerHeight})`).call(xAxis).selectAll('text');
+    if (this.layout.rotateX) {
+      labels.attr('transform', `rotate(-${X_LABEL_ANGLE})`).attr('text-anchor', 'end').attr('dx', '-0.6em').attr('dy', '0.2em');
+    }
+    labels.each(function (this: SVGTextElement, value: unknown) {
+      if ([...String(value)].length > maxChars) d3.select(this).append('title').text(String(value));
+    });
+    this.drawYAxis(chart, numericY);
+  }
+
+  private drawYAxis(chart: any, numericY: ReturnType<typeof numericAxis>): void {
     chart
       .append('g')
       .attr('class', 'axis axis-y')
       .call(
-        d3.axisLeft(y)
-          .ticks(6)
-          .tickSizeOuter(0)
-          .tickFormat((d: any) => {
-            if (d >= 1000) return (d / 1000) + 'k';
-            return d;
-          })
-      )
+        d3.axisLeft<number>(numericY.scale).tickValues(numericY.ticks).tickSizeOuter(0).tickFormat(numericY.format)
+      );
   }
 
   private aggregateByCategory(data: any[], catKey: string, valKey: string): any[] {
-    const map = new Map<string, number>();
-
-    for (const row of data) {
-      const key = String(row[catKey]);
-      const value = this.getValue(row, valKey);
-      map.set(key, (map.get(key) ?? 0) + value);
-    }
-
-    return Array.from(map.entries()).map(([key, value]) => ({
-      [catKey]: key,
-      [valKey]: value,
-    }));
+    return aggregateCategories(data, catKey, valKey);
   }
+
   private drawAxisLabels(svg: any): void {
-    if (this.config.xAxisLabel) svg.append('text').attr('class', 'axis-label x-label').attr('x', this.width / 2).attr('y', this.height + 32).attr('text-anchor', 'middle').text(this.config.xAxisLabel);
-    if (this.config.yAxisLabel) svg.append('text').attr('class', 'axis-label y-label').attr('x', -this.height / 2).attr('y', 18).attr('text-anchor', 'middle').attr('transform', 'rotate(-90)').text(this.config.yAxisLabel);
+    const { margin, innerWidth, innerHeight, height } = this.layout;
+    const charsPer = (space: number) => Math.max(8, Math.floor(space / (TITLE_FONT * CHAR_RATIO)));
+    const addTitle = (text: string, space: number, className: string) => {
+      const shown = truncate(text, charsPer(space));
+      const node = svg.append('text').attr('class', `axis-label ${className}`).attr('text-anchor', 'middle').text(isolate(shown));
+      if (shown !== text) node.append('title').text(text);
+      return node;
+    };
+
+    if (this.config.xAxisLabel) {
+      addTitle(this.config.xAxisLabel, innerWidth, 'x-label')
+        .attr('x', margin.left + innerWidth / 2)
+        .attr('y', height - 10);
+    }
+    if (this.config.yAxisLabel) {
+      addTitle(this.config.yAxisLabel, innerHeight, 'y-label')
+        .attr('transform', `translate(${AXIS_TITLE_BAND / 2 + 2},${margin.top + innerHeight / 2}) rotate(-90)`)
+        .attr('dominant-baseline', 'middle');
+    }
   }
 
-  private showTooltip(event: MouseEvent, html: string): void {
+  // Built with DOM text nodes: spreadsheet values must never be parsed as HTML.
+  private showTooltip(event: MouseEvent, rows: TooltipRow[]): void {
     if (!this.config.showTooltip) return;
 
     const tooltip = this.tooltip.nativeElement;
-
-    tooltip.innerHTML = html;
+    tooltip.replaceChildren(...rows.map(row => {
+      const item = document.createElement('div');
+      item.className = 'tooltip-row';
+      const swatch = document.createElement('span');
+      swatch.className = 'tooltip-swatch';
+      swatch.style.background = row.color;
+      const label = document.createElement('bdi');
+      label.className = 'tooltip-label';
+      label.textContent = String(row.label ?? '');
+      const value = document.createElement('span');
+      value.className = 'tooltip-value';
+      value.textContent = typeof row.value === 'number' ? row.value.toLocaleString('en-US') : String(row.value ?? '');
+      item.append(swatch, label, value);
+      return item;
+    }));
     tooltip.style.opacity = '1';
-    
-    tooltip.style.position = 'fixed';
-    tooltip.style.zIndex = '99999';
-    tooltip.style.left = `${event.clientX + 16}px`;
-    tooltip.style.top = `${event.clientY + 16}px`;
+
+    // Prefer the lower right of the cursor; flip when that would leave the viewport.
+    const gap = 14;
+    const edge = 8;
+    const { width, height } = tooltip.getBoundingClientRect();
+    let left = event.clientX + gap;
+    let top = event.clientY + gap;
+    if (left + width > window.innerWidth - edge) left = event.clientX - gap - width;
+    if (top + height > window.innerHeight - edge) top = event.clientY - gap - height;
+    tooltip.style.left = `${Math.max(edge, left)}px`;
+    tooltip.style.top = `${Math.max(edge, top)}px`;
   }
 
   private hideTooltip(): void {
     this.tooltip.nativeElement.style.opacity = '0';
   }
+}
+
+function sameChartData(a?: ChartConfig, b?: ChartConfig): boolean {
+  if (!a || !b) return false;
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]) as Set<keyof ChartConfig>;
+  for (const key of keys) {
+    if (key !== 'title' && a[key] !== b[key]) return false;
+  }
+  return true;
+}
+
+function textWidth(labels: string[], fontSize: number): number {
+  return labels.reduce((widest, label) => Math.max(widest, [...label].length), 0) * fontSize * CHAR_RATIO;
+}
+
+function truncate(text: string, maxChars: number): string {
+  const chars = [...text];
+  return chars.length > maxChars ? chars.slice(0, maxChars - 1).join('') + '…' : text;
+}
+
+// The SVG is laid out left-to-right; Arabic labels get their own RTL isolate.
+function isolate(text: string): string {
+  return RTL_TEXT.test(text) ? `⁧${text}⁩` : text;
 }
